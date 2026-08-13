@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://queshift.in/sitemap.xml
