@@ -1,0 +1,27 @@
+QUESHiFT v3 FIX - IMPORTANT DEPLOYMENT STEPS
+
+1) GitHub:
+   Upload/replace ALL files from this package in your existing Queshift GitHub repository.
+
+2) Google Apps Script backend (REQUIRED for uploaded images + persistent login):
+   - Open Queshift Website Database Google Sheet
+   - Extensions > Apps Script
+   - Open Code.gs
+   - Replace the complete old Code.gs with: google-backend/Code.gs from this package
+   - Save
+   - Deploy > Manage deployments
+   - Edit (pencil) > Version: New version > Deploy
+   - Keep Execute as: Me and Who has access: Anyone
+
+DO NOT create a new Web App URL. Update the existing deployment so the configured /exec URL remains the same.
+
+Fixed in v3:
+- Transparent Queshift PNG logo on all pages
+- User favicon package installed
+- Blank Leadership section fallback fixed
+- Trusted Coverage/brands fallback fixed
+- Banner slider fallback fixed; supplied AW Taxation/Queshift banner installed
+- Uploaded Drive photos/logo/banner/blog images render using public thumbnail URLs and resource keys
+- Payment QR always has a working static fallback; uploaded QR can override it
+- Full footer on Downloads and all public content pages
+- Customer/admin session persists across browser restarts until explicit Queshift Sign out (or browser site data is cleared / session is revoked)

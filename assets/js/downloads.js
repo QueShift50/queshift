@@ -30,7 +30,11 @@
   if (QSApi.isConfigured()) QSApi.get("publicData").then(data => {
     gstRate = +data.gstRate || 18;
     if (Array.isArray(data.plans) && data.plans.length) plans = data.plans.map((p, i) => ({ ...p, period: p.code === "MONTHLY" ? "1 month" : p.code === "HALF_YEARLY" ? "6 months" : p.code === "YEARLY" ? "12 months" : `${p.days} days`, popular: p.code === "HALF_YEARLY" || (!p.code && i === 1) }));
-    const qr = document.querySelector(".payment-qr"); if (data.qrUrl && qr) qr.src = data.qrUrl;
+    const qr = document.querySelector(".payment-qr"); if (qr) {
+      const fallbackQr = "assets/images/payment-qr.png";
+      qr.onerror = () => { qr.onerror = null; qr.src = fallbackQr; };
+      qr.src = QSApi.mediaUrl(data.qrUrl, fallbackQr);
+    }
     render();
   }).catch(() => {});
 })();

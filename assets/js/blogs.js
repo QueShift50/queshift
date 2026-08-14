@@ -5,7 +5,7 @@
   async function list() {
     const grid = document.querySelector("[data-blog-list]"); if (!grid) return;
     let blogs = fallback; try { if (QSApi.isConfigured()) blogs = await QSApi.get("blogs"); } catch (_) {}
-    grid.innerHTML = (blogs.length ? blogs : fallback).map(b => `<article class="blog-card"><img src="${esc(b.imageUrl||"assets/images/aw-taxation-banner.jpg")}" alt="${esc(b.title)}"><div><div class="blog-meta"><span>${esc(b.date||"")}</span><span>${esc(b.tags||"")}</span></div><h2>${esc(b.title)}</h2><p>${esc(b.summary||"")}</p><a class="btn btn-outline btn-sm" href="blog.html?slug=${encodeURIComponent(b.slug)}">Read Article →</a></div></article>`).join("");
+    grid.innerHTML = (blogs.length ? blogs : fallback).map(b => `<article class="blog-card"><img src="${esc(QSApi.mediaUrl(b.imageUrl,"assets/images/aw-taxation-banner.jpg"))}" alt="${esc(b.title)}"><div><div class="blog-meta"><span>${esc(b.date||"")}</span><span>${esc(b.tags||"")}</span></div><h2>${esc(b.title)}</h2><p>${esc(b.summary||"")}</p><a class="btn btn-outline btn-sm" href="blog.html?slug=${encodeURIComponent(b.slug)}">Read Article →</a></div></article>`).join("");
   }
   async function detail() {
     const body = document.querySelector("[data-blog-body]"); if (!body) return; const slug = new URLSearchParams(location.search).get("slug");
@@ -16,7 +16,7 @@
       document.title = b.metaTitle || b.title + " | Queshift Blog";
       document.querySelector('meta[name="description"]').content = b.metaDescription || b.summary || "";
       document.querySelector("[data-blog-title]").textContent = b.title; document.querySelector("[data-blog-summary]").textContent = b.summary || "";
-      const cover = document.querySelector("[data-blog-cover]"); if (b.imageUrl) { cover.src = b.imageUrl; cover.alt = b.title; } else cover.hidden = true;
+      const cover = document.querySelector("[data-blog-cover]"); if (b.imageUrl) { cover.src = QSApi.mediaUrl(b.imageUrl, "assets/images/aw-taxation-banner.jpg"); cover.alt = b.title; } else cover.hidden = true;
       body.innerHTML = b.html || "<p>Article content is being prepared.</p>";
       document.querySelector("[data-blog-date]").textContent = b.date || ""; document.querySelector("[data-blog-tags]").textContent = b.tags || "";
       const schema = { "@context":"https://schema.org", "@type":"BlogPosting", headline:b.title, description:b.metaDescription||b.summary, image:b.imageUrl, datePublished:b.isoDate, author:{"@type":"Organization",name:"Queshift by AW Taxation"}, publisher:{"@type":"Organization",name:"Queshift",url:"https://queshift.in"}, mainEntityOfPage:`https://queshift.in/blog.html?slug=${encodeURIComponent(slug)}` };

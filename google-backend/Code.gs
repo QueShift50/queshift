@@ -58,8 +58,9 @@ function doPost(e) {
     if (action === 'contact') data = contact_(payload);
     else if (action === 'login') data = login_(credential,false);
     else if (action === 'adminLogin') data = login_(credential,true);
+    else if (action === 'logout') data = logoutSession_(credential);
     else {
-      var identity = verifyGoogleToken_(credential);
+      var identity = verifyCredential_(credential);
       if (action === 'saveProfile') data = saveProfile_(identity,payload);
       else if (action === 'userDashboard') data = userDashboard_(identity);
       else if (action === 'paymentAttempt') data = paymentAttempt_(identity,payload);
@@ -89,11 +90,11 @@ function doPost(e) {
 function publicData_() {
   return {
     heroTitle:getSetting_('HERO_TITLE'), heroText:getSetting_('HERO_TEXT'), phone1:getSetting_('PHONE1'), phone2:getSetting_('PHONE2'), email:getSetting_('EMAIL'),
-    logoUrl:getSetting_('LOGO_URL') || '', qrUrl:getSetting_('QR_URL') || '', gstRate:+getSetting_('GST_RATE')||18, social:parseJson_(getSetting_('SOCIAL_JSON'),'{}'),
+    logoUrl:publicMediaUrl_(getSetting_('LOGO_URL') || getSetting_('LOGO_FILE_ID')), qrUrl:publicMediaUrl_(getSetting_('QR_URL') || getSetting_('QR_FILE_ID')), gstRate:+getSetting_('GST_RATE')||18, social:parseJson_(getSetting_('SOCIAL_JSON'),'{}'),
     plans:rows_('PLANS').filter(active_).map(function(r){return{code:r.CODE,name:r.NAME,price:+r.BASE_PRICE,days:+r.DAYS};}),
-    banners:rows_('BANNERS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,title:r.TITLE,imageUrl:r.IMAGE_URL,link:r.LINK,active:bool_(r.ACTIVE)};}),
-    partners:rows_('PARTNERS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,name:r.NAME,role:r.ROLE,bio:r.BIO,imageUrl:r.IMAGE_URL};}),
-    brands:rows_('BRANDS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,name:r.NAME,imageUrl:r.IMAGE_URL,url:r.URL};}),
+    banners:rows_('BANNERS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,title:r.TITLE,imageUrl:publicMediaUrl_(r.IMAGE_URL),link:r.LINK,active:bool_(r.ACTIVE)};}),
+    partners:rows_('PARTNERS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,name:r.NAME,role:r.ROLE,bio:r.BIO,imageUrl:publicMediaUrl_(r.IMAGE_URL)};}),
+    brands:rows_('BRANDS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,name:r.NAME,imageUrl:publicMediaUrl_(r.IMAGE_URL),url:r.URL};}),
     videos:rows_('VIDEOS').filter(active_).map(function(r){return{id:r.ID,url:r.URL,videoId:r.VIDEO_ID,title:r.TITLE,description:r.DESCRIPTION,thumbnail:r.THUMBNAIL,featured:bool_(r.FEATURED),active:bool_(r.ACTIVE)};})
   };
 }
@@ -105,19 +106,23 @@ function publicBlog_(slug) {
   var row = rows_('BLOGS').filter(function(r){return r.SLUG===slug && String(r.STATUS).toUpperCase()==='PUBLISHED';})[0]; if(!row) throw new Error('Blog not found.');
   var b=blogPublic_(row,true); b.comments=rows_('COMMENTS').filter(function(c){return c.BLOG_SLUG===slug&&c.STATUS==='APPROVED';}).map(function(c){return{name:c.NAME,comment:c.COMMENT,reply:c.REPLY};}); return b;
 }
-function blogPublic_(r,full){var o={id:r.ID,slug:r.SLUG,title:r.TITLE,summary:r.SUMMARY,imageUrl:r.IMAGE_URL,metaTitle:r.META_TITLE,metaDescription:r.META_DESCRIPTION,keywords:r.KEYWORDS,tags:r.TAGS,date:formatDate_(r.PUBLISHED_AT),isoDate:new Date(r.PUBLISHED_AT||r.UPDATED_AT).toISOString()};if(full)o.html=r.HTML;return o;}
+function blogPublic_(r,full){var o={id:r.ID,slug:r.SLUG,title:r.TITLE,summary:r.SUMMARY,imageUrl:publicMediaUrl_(r.IMAGE_URL),metaTitle:r.META_TITLE,metaDescription:r.META_DESCRIPTION,keywords:r.KEYWORDS,tags:r.TAGS,date:formatDate_(r.PUBLISHED_AT),isoDate:new Date(r.PUBLISHED_AT||r.UPDATED_AT).toISOString()};if(full)o.html=r.HTML;return o;}
 
 function login_(credential,adminOnly) {
   var id=verifyGoogleToken_(credential), admin=String(id.email).toLowerCase()===String(getSetting_('ADMIN_EMAIL')||QS_ADMIN_EMAIL).toLowerCase();
   if(adminOnly&&!admin)throw new Error('This Google account is not authorised for admin access.');
   var user=findOne_('USERS','EMAIL',id.email); if(!user)appendObject_('USERS',{GOOGLE_ID:id.sub,EMAIL:id.email,NAME:id.name||'',COMPANY:'',PHONE:'',ADDRESS:'',STATE:'',PIN:'',GSTIN:'',CREATED_AT:now_(),UPDATED_AT:now_()});
-  return{email:id.email,name:id.name||'',picture:id.picture||'',role:admin?'ADMIN':'CUSTOMER',profileComplete:!!(user&&user.PHONE&&user.STATE)};
+  var role=admin?'ADMIN':'CUSTOMER',sessionToken=createSession_(id,role);return{email:id.email,name:id.name||'',picture:id.picture||'',role:role,profileComplete:!!(user&&user.PHONE&&user.STATE),sessionToken:sessionToken};
 }
 function verifyGoogleToken_(token) {
   if(!token)throw new Error('Google login is required.'); var clientId=PropertiesService.getScriptProperties().getProperty('GOOGLE_CLIENT_ID'); if(!clientId)throw new Error('GOOGLE_CLIENT_ID is not configured in Apps Script.');
   var res=UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token='+encodeURIComponent(token),{muteHttpExceptions:true}); if(res.getResponseCode()!==200)throw new Error('Google login token is invalid or expired.');
   var id=JSON.parse(res.getContentText()); if(id.aud!==clientId)throw new Error('Google token audience mismatch.'); if(String(id.email_verified)!=='true')throw new Error('Google email is not verified.'); return id;
 }
+function verifyCredential_(token){if(String(token||'').indexOf('qss_')===0)return verifySession_(token);return verifyGoogleToken_(token);}
+function createSession_(id,role){var token='qss_'+Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,''),data={email:id.email,name:id.name||'',sub:id.sub||'',picture:id.picture||'',role:role||'CUSTOMER',createdAt:new Date().toISOString()};PropertiesService.getScriptProperties().setProperty('SESSION_'+token,JSON.stringify(data));return token;}
+function verifySession_(token){if(!token)throw new Error('Login is required.');var raw=PropertiesService.getScriptProperties().getProperty('SESSION_'+token);if(!raw)throw new Error('Your Queshift session is not active. Please login again.');var id=parseJson_(raw,'{}');if(!id.email)throw new Error('Your Queshift session is invalid. Please login again.');return id;}
+function logoutSession_(token){if(String(token||'').indexOf('qss_')===0)PropertiesService.getScriptProperties().deleteProperty('SESSION_'+token);return{loggedOut:true};}
 function requireAdmin_(id){if(String(id.email).toLowerCase()!==String(getSetting_('ADMIN_EMAIL')||QS_ADMIN_EMAIL).toLowerCase())throw new Error('Admin authorisation required.');}
 
 function saveProfile_(id,p) {
@@ -203,7 +208,10 @@ function seedSetting_(key,value){if(!findOne_('SETTINGS','KEY',key))appendObject
 function settingsObject_(){var o={};rows_('SETTINGS').forEach(function(r){o[r.KEY]=r.VALUE;});return o;}
 function getOrCreateFolder_(parent,name){var it=parent.getFoldersByName(name);return it.hasNext()?it.next():parent.createFolder(name);}
 function getSubfolder_(name){return getOrCreateFolder_(DriveApp.getFolderById(getSetting_('ROOT_FOLDER_ID')),name);}
-function saveDataUrl_(dataUrl,name,folder,isPublic){var m=String(dataUrl).match(/^data:([^;]+);base64,(.+)$/);if(!m)throw new Error('Invalid uploaded file.');var ext=(m[1].split('/')[1]||'bin').replace('jpeg','jpg'),blob=Utilities.newBlob(Utilities.base64Decode(m[2]),m[1],name+'.'+ext),file=folder.createFile(blob);if(isPublic)try{file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);}catch(e){}return{id:file.getId(),url:file.getUrl(),publicUrl:'https://drive.google.com/uc?export=view&id='+file.getId()};}
+function extractDriveId_(value){var s=String(value||''),m=s.match(/[?&]id=([A-Za-z0-9_-]{10,})/)||s.match(/\/d\/([A-Za-z0-9_-]{10,})/);if(m)return m[1];if(/^[A-Za-z0-9_-]{20,}$/.test(s))return s;return'';}
+function publicFileUrl_(file){if(!file)return'';var key='';try{if(file.getSecurityUpdateEnabled())key=file.getResourceKey()||'';}catch(e){}return'https://drive.google.com/thumbnail?id='+encodeURIComponent(file.getId())+'&sz=w2000'+(key?'&resourcekey='+encodeURIComponent(key):'');}
+function publicMediaUrl_(value){if(!value)return'';var id=extractDriveId_(value);if(!id)return String(value);try{return publicFileUrl_(DriveApp.getFileById(id));}catch(e){return String(value);}}
+function saveDataUrl_(dataUrl,name,folder,isPublic){var m=String(dataUrl).match(/^data:([^;]+);base64,(.+)$/);if(!m)throw new Error('Invalid uploaded file.');var ext=(m[1].split('/')[1]||'bin').replace('jpeg','jpg'),blob=Utilities.newBlob(Utilities.base64Decode(m[2]),m[1],name+'.'+ext),file=folder.createFile(blob);if(isPublic)try{file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);}catch(e){}var publicUrl=isPublic?publicFileUrl_(file):file.getUrl();return{id:file.getId(),url:file.getUrl(),publicUrl:publicUrl};}
 function imageData_(id){if(!id)return'';try{var b=DriveApp.getFileById(id).getBlob();return'data:'+b.getContentType()+';base64,'+Utilities.base64Encode(b.getBytes());}catch(e){return'';}}
 function youtubeMeta_(id){var key=PropertiesService.getScriptProperties().getProperty('YOUTUBE_API_KEY');if(!key)return{title:'',description:'',thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'};try{var url='https://www.googleapis.com/youtube/v3/videos?part=snippet&id='+encodeURIComponent(id)+'&key='+encodeURIComponent(key),j=JSON.parse(UrlFetchApp.fetch(url).getContentText()),s=j.items[0].snippet;return{title:s.title,description:s.description,thumbnail:s.thumbnails.high.url};}catch(e){return{title:'',description:'',thumbnail:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'};}}
 function parseVideoId_(url){var s=String(url||''),m=s.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([A-Za-z0-9_-]{6,})/);return m?m[1]:'';}

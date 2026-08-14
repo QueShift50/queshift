@@ -8,7 +8,7 @@
   function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
   function go(tab) { document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === tab)); document.querySelectorAll(".admin-section").forEach(s => s.classList.toggle("active", s.id === tab)); window.scrollTo({ top: 0, behavior: "smooth" }); }
   document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => go(b.dataset.tab)); document.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => go(b.dataset.jump));
-  document.querySelector("[data-admin-logout]").onclick = () => { QSApi.clearSession(); location.href = "admin.html"; };
+  document.querySelector("[data-admin-logout]").onclick = async () => { await QSApi.logout(); location.href = "admin.html"; };
 
   async function payloadFromForm(form) {
     const payload = {}; for (const [key, value] of new FormData(form)) payload[key] = value instanceof File ? "" : value;
@@ -22,7 +22,7 @@
   }));
 
   async function action(name, payload) { note("Processing…"); try { await QSApi.post(name, payload, QSApi.token()); note("Completed successfully."); await load(); } catch (error) { note(error.message, true); } }
-  function media(items, type) { return (items || []).map(x => `<article class="media-card">${x.imageUrl || x.thumbnail ? `<img src="${esc(x.imageUrl || x.thumbnail)}" alt="">` : '<div class="media-placeholder">No image</div>'}<div><b>${esc(x.title || x.name)}</b><small>${esc(x.role || x.url || x.status || "")}</small></div><button data-delete-type="${type}" data-delete-id="${esc(x.id)}">Remove</button></article>`).join("") || '<p class="empty-state">Nothing added yet.</p>'; }
+  function media(items, type) { return (items || []).map(x => `<article class="media-card">${x.imageUrl || x.thumbnail ? `<img src="${esc(QSApi.mediaUrl(x.imageUrl || x.thumbnail))}" alt="">` : '<div class="media-placeholder">No image</div>'}<div><b>${esc(x.title || x.name)}</b><small>${esc(x.role || x.url || x.status || "")}</small></div><button data-delete-type="${type}" data-delete-id="${esc(x.id)}">Remove</button></article>`).join("") || '<p class="empty-state">Nothing added yet.</p>'; }
   function bindDelete() { document.querySelectorAll("[data-delete-type]").forEach(b => b.onclick = () => confirm("Remove this item?") && action("deleteContent", { type: b.dataset.deleteType, id: b.dataset.deleteId })); }
   function fillSettings() {
     const s = dashboard.settings || {}, social = document.querySelector('[data-action="saveSocial"]');

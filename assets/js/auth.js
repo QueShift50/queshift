@@ -10,11 +10,13 @@
     message("Verifying your Google account…");
     try {
       const data = await QSApi.post(isAdmin ? "adminLogin" : "login", {}, response.credential);
-      QSApi.setSession(response.credential, data);
+      QSApi.setSession(data.sessionToken || response.credential, data);
       location.href = next;
     } catch (error) { message(error.message, true); }
   }
   function start() {
+    const existing = QSApi.session();
+    if (QSApi.token() && existing && (!isAdmin || existing.role === "ADMIN")) { location.replace(next); return; }
     if (!QSApi.isConfigured() || !QSApi.cfg.googleClientId || QSApi.cfg.googleClientId.startsWith("PASTE_")) {
       message("Secure Google login setup is pending. Complete SETUP-GUIDE before testing login.", true); return;
     }

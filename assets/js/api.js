@@ -21,7 +21,7 @@
     return new Promise((resolve, reject) => {
       const callback = "qsCallback_" + Date.now() + "_" + Math.random().toString(36).slice(2);
       const script = document.createElement("script");
-      const timeout = setTimeout(() => finish(new Error("Backend response timeout.")), 15000);
+      const timeout = setTimeout(() => finish(new Error("Backend response timeout.")), 20000);
       function finish(error, value) {
         clearTimeout(timeout);
         delete window[callback];
@@ -41,18 +41,48 @@
     });
   }
 
-  function token() { return sessionStorage.getItem("qs_google_credential") || ""; }
+  function driveId(value) {
+    const text = String(value || "");
+    let m = text.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+    if (!m) m = text.match(/\/d\/([A-Za-z0-9_-]{10,})/);
+    if (!m && /^[A-Za-z0-9_-]{20,}$/.test(text)) m = [text, text];
+    return m ? m[1] : "";
+  }
+
+  function mediaUrl(value, fallback) {
+    const text = String(value || "").trim();
+    if (!text) return fallback || "";
+    const id = driveId(text);
+    if (!id) return text;
+    let resourceKey = "";
+    try { resourceKey = new URL(text, location.href).searchParams.get("resourcekey") || ""; } catch (_) {}
+    return "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w2000" + (resourceKey ? "&resourcekey=" + encodeURIComponent(resourceKey) : "");
+  }
+
+  function token() {
+    return localStorage.getItem("qs_auth_token") || sessionStorage.getItem("qs_google_credential") || "";
+  }
   function session() {
-    try { return JSON.parse(sessionStorage.getItem("qs_session") || "null"); }
+    try { return JSON.parse(localStorage.getItem("qs_session") || sessionStorage.getItem("qs_session") || "null"); }
     catch (_) { return null; }
   }
   function setSession(credential, data) {
-    sessionStorage.setItem("qs_google_credential", credential);
-    sessionStorage.setItem("qs_session", JSON.stringify(data));
-  }
-  function clearSession() {
+    const appToken = (data && data.sessionToken) || credential;
+    localStorage.setItem("qs_auth_token", appToken);
+    localStorage.setItem("qs_session", JSON.stringify(data || {}));
     sessionStorage.removeItem("qs_google_credential");
     sessionStorage.removeItem("qs_session");
+  }
+  function clearSession() {
+    localStorage.removeItem("qs_auth_token");
+    localStorage.removeItem("qs_session");
+    sessionStorage.removeItem("qs_google_credential");
+    sessionStorage.removeItem("qs_session");
+  }
+  async function logout() {
+    const t = token();
+    try { if (t && isConfigured()) await post("logout", {}, t); } catch (_) {}
+    clearSession();
   }
   function requireUser(next) {
     if (!token()) {
@@ -73,5 +103,5 @@
     });
   }
 
-  window.QSApi = { cfg, isConfigured, get, post, token, session, setSession, clearSession, requireUser, fileToDataUrl };
+  window.QSApi = { cfg, isConfigured, get, post, token, session, setSession, clearSession, logout, requireUser, fileToDataUrl, mediaUrl };
 })();
