@@ -6,7 +6,11 @@
     heroText: "Maintain e-commerce accounts, reconcile settlements and understand exact order-wise calculation across every major marketplace.",
     phone1: "9310907124", phone2: "9310907125", email: "info.queshift@gmail.com",
     logoUrl: "assets/images/queshift-logo.png",
-    banners: [{ title: "E-commerce Accounting & Reconciliation", imageUrl: "assets/images/aw-taxation-banner.jpg", link: "https://www.awtaxation.com/" }],
+    faviconUrl: "favicon-32x32.png",
+    banners: [
+      { title: "E-commerce Accounting & Reconciliation", imageUrl: "assets/images/queshift-banner-1.png", link: "contact.html" },
+      { title: "Designed for Marketplace Sellers and Growing Brands", imageUrl: "assets/images/queshift-banner-2.png", link: "about.html" }
+    ],
     partners: [{ name: "Ajay Kumar", role: "Co-Owner, Queshift", imageUrl: "" }, { name: "Wasim Raza", role: "Co-Owner, Queshift", imageUrl: "" }],
     brands: ["Amazon", "Flipkart", "Myntra", "Meesho", "AJIO", "Nykaa", "JioMart", "Snapdeal", "D2C Websites", "Multi-channel Brands"],
     social: { youtube: "", instagram: "", facebook: "", awtaxation: "https://www.awtaxation.com/", whatsapp: "https://wa.me/919310907124" },
@@ -48,11 +52,19 @@
     const cached = getLocal() || {}, remote = data || {};
     const out = Object.assign({}, defaults, cached, remote);
     if (!String(out.logoUrl || "").trim()) out.logoUrl = String(cached.logoUrl || "").trim() || defaults.logoUrl;
-    ["banners", "partners", "brands"].forEach(key => {
+    if (!String(out.faviconUrl || "").trim()) out.faviconUrl = String(cached.faviconUrl || "").trim() || defaults.faviconUrl;
+    ["banners", "brands"].forEach(key => {
       if (!Array.isArray(out[key]) || !out[key].length) {
         out[key] = Array.isArray(cached[key]) && cached[key].length ? cached[key] : defaults[key];
       }
     });
+    const partnerMap = new Map();
+    [defaults.partners, Array.isArray(cached.partners) ? cached.partners : [], Array.isArray(remote.partners) ? remote.partners : []].forEach(list => list.forEach(item => {
+      const key = String(item && item.name || "").trim().toLowerCase();
+      if (!key) return;
+      partnerMap.set(key, Object.assign({}, partnerMap.get(key) || {}, item));
+    }));
+    out.partners = Array.from(partnerMap.values());
     if (!Array.isArray(out.videos)) out.videos = [];
     out.social = Object.assign({}, defaults.social, cached.social || {}, remote.social || {});
     return out;
@@ -60,6 +72,42 @@
   function mediaUrl(value, fallback) {
     const raw = window.QSApi && QSApi.mediaUrl ? QSApi.mediaUrl(value, fallback) : (value || fallback || "");
     return safeUrl(raw);
+  }
+  function bindMedia(root) {
+    const scope = root || document;
+    scope.querySelectorAll("img[data-media-src]").forEach(img => {
+      const value = img.getAttribute("data-media-src") || "";
+      const fallback = img.getAttribute("data-media-fallback") || "";
+      if (window.QSApi && QSApi.bindImage) QSApi.bindImage(img, value, fallback);
+      else {
+        img.onerror = () => { img.onerror = null; if (fallback) img.src = fallback; };
+        img.src = mediaUrl(value, fallback);
+      }
+    });
+  }
+  function mediaImg(value, alt, className, fallback) {
+    const src = mediaUrl(value, fallback);
+    return `<img${className ? ` class="${esc(className)}"` : ""} src="${esc(src)}" data-media-src="${esc(value || "")}" data-media-fallback="${esc(fallback || "")}" alt="${esc(alt || "")}" loading="lazy">`;
+  }
+  function applyFavicon(value) {
+    const fallback = "favicon-32x32.png";
+    const candidates = window.QSApi && QSApi.mediaCandidates ? QSApi.mediaCandidates(value, fallback) : [mediaUrl(value, fallback)];
+    const tryAt = index => {
+      if (index >= candidates.length) return;
+      const test = new Image();
+      test.onload = () => {
+        const fresh = candidates[index] + (candidates[index].includes("?") ? "&" : "?") + "qsfv=" + Date.now();
+        document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach(link => { link.href = fresh; });
+        let dynamic = document.querySelector('link[data-qs-dynamic-favicon]');
+        if (!dynamic) {
+          dynamic = document.createElement("link"); dynamic.rel = "icon"; dynamic.setAttribute("data-qs-dynamic-favicon", "1"); document.head.appendChild(dynamic);
+        }
+        dynamic.href = fresh;
+      };
+      test.onerror = () => tryAt(index + 1);
+      test.src = candidates[index];
+    };
+    tryAt(0);
   }
   async function loadPublic() {
     let data = merge();
@@ -81,9 +129,10 @@
     document.querySelectorAll("[data-hero-text]").forEach(e => e.textContent = data.heroText);
     document.querySelectorAll("[data-site-logo]").forEach(e => {
       const fallback = "assets/images/queshift-logo.png";
-      e.onerror = () => { e.onerror = null; e.src = fallback; };
-      e.src = mediaUrl(data.logoUrl, fallback);
+      if (window.QSApi && QSApi.bindImage) QSApi.bindImage(e, data.logoUrl, fallback);
+      else { e.onerror = () => { e.onerror = null; e.src = fallback; }; e.src = mediaUrl(data.logoUrl, fallback); }
     });
+    applyFavicon(data.faviconUrl);
     document.querySelectorAll("[data-whatsapp]").forEach(e => e.href = "https://wa.me/91" + data.phone1 + "?text=" + encodeURIComponent("Hello Queshift, I want to know about e-commerce accounting and reconciliation software."));
     renderBrands(data.brands || []); renderPartners(data.partners || []); renderBanners(data.banners || []); renderSocial(data.social || {});
     renderVideo((data.videos || []).find(v => v.active !== false && v.featured) || (data.videos || []).find(v => v.active !== false));
@@ -93,19 +142,53 @@
   function renderBrands(brands) {
     document.querySelectorAll("[data-brand-track]").forEach(track => {
       const items = brands.map(b => typeof b === "string" ? { name: b } : b), repeated = items.concat(items);
-      track.innerHTML = repeated.map(item => `<a class="brand-pill" ${item.url ? `href="${safeUrl(item.url)}" target="_blank" rel="noopener"` : ""}>${item.imageUrl ? `<img src="${mediaUrl(item.imageUrl)}" alt="${esc(item.name || "Queshift brand")}" loading="lazy">` : ""}<span>${esc(item.name)}</span></a>`).join("");
+      track.innerHTML = repeated.map(item => `<a class="brand-pill" ${item.url ? `href="${safeUrl(item.url)}" target="_blank" rel="noopener"` : ""}>${item.imageUrl ? mediaImg(item.imageUrl, item.name || "Queshift brand", "", "") : ""}<span>${esc(item.name)}</span></a>`).join("");
+      bindMedia(track);
     });
   }
+  function ownerFallback(name) {
+    const n = String(name || "").toLowerCase();
+    return n.includes("wasim") ? "assets/images/owner-wasim-placeholder.svg" : "assets/images/owner-ajay-placeholder.svg";
+  }
   function renderPartners(partners) {
-    const wrap = document.querySelector("[data-partners]"); if (!wrap) return;
-    wrap.innerHTML = partners.map(p => `<article class="owner">${p.imageUrl ? `<img class="owner-photo real" src="${mediaUrl(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy">` : `<div class="owner-photo">${esc(p.name)}<br>PHOTO<br>COMING SOON</div>`}<div><h3>${esc(p.name)}</h3><b>${esc(p.role || "Co-Owner, Queshift")}</b><p>${esc(p.bio || "Building practical e-commerce accounting and reconciliation solutions for growing sellers.")}</p></div></article>`).join("");
+    document.querySelectorAll("[data-partners]").forEach(wrap => {
+      wrap.innerHTML = partners.map(p => {
+        const fallback = ownerFallback(p.name);
+        const photo = mediaImg(p.imageUrl || fallback, p.name, "owner-photo real", fallback);
+        return `<article class="owner">${photo}<div><h3>${esc(p.name)}</h3><b>${esc(p.role || "Co-Owner, Queshift")}</b><p>${esc(p.bio || "Building practical e-commerce accounting and reconciliation solutions for growing sellers.")}</p></div></article>`;
+      }).join("");
+      bindMedia(wrap);
+    });
   }
   function renderBanners(banners) {
     const slider = document.querySelector("[data-banner-slider]"); if (!slider || !banners.length) return;
-    slider.innerHTML = `<div class="banner-track">${banners.map((b, i) => `<a class="banner-slide${i ? "" : " active"}" href="${safeUrl(b.link || "#")}" ${b.link ? 'target="_blank" rel="noopener"' : ""}><img src="${mediaUrl(b.imageUrl, "assets/images/aw-taxation-banner.jpg")}" alt="${esc(b.title || "Queshift banner")}"><span>${esc(b.title || "")}</span></a>`).join("")}</div><div class="slider-dots">${banners.map((_, i) => `<button aria-label="Banner ${i + 1}" class="${i ? "" : "active"}" data-slide="${i}"></button>`).join("")}</div>`;
-    let index = 0; const slides = slider.querySelectorAll(".banner-slide"), dots = slider.querySelectorAll("[data-slide]");
-    const show = n => { index = (n + slides.length) % slides.length; slides.forEach((s, i) => s.classList.toggle("active", i === index)); dots.forEach((d, i) => d.classList.toggle("active", i === index)); };
-    dots.forEach(d => d.onclick = () => show(+d.dataset.slide)); if (slides.length > 1) setInterval(() => show(index + 1), 5200);
+    slider.innerHTML = `<div class="banner-track" aria-live="off">${banners.map((b, i) => `<a class="banner-slide${i ? "" : " active"}" href="${safeUrl(b.link || "#")}" ${b.link && /^https?:/i.test(b.link) ? 'target="_blank" rel="noopener"' : ""} aria-hidden="${i ? "true" : "false"}">${mediaImg(b.imageUrl, b.title || "Queshift banner", "", "assets/images/queshift-banner-1.png")}<span>${esc(b.title || "")}</span></a>`).join("")}</div><div class="slider-dots">${banners.map((_, i) => `<button type="button" aria-label="Show banner ${i + 1}" class="${i ? "" : "active"}" data-slide="${i}"></button>`).join("")}</div>`;
+    bindMedia(slider);
+    let index = 0, timer = 0;
+    const slides = Array.from(slider.querySelectorAll(".banner-slide")), dots = Array.from(slider.querySelectorAll("[data-slide]"));
+    const show = n => {
+      const next = (n + slides.length) % slides.length;
+      if (next === index && slides[index].classList.contains("active")) return;
+      slides.forEach((slide, i) => {
+        const active = i === next;
+        slide.classList.toggle("active", active);
+        slide.setAttribute("aria-hidden", active ? "false" : "true");
+      });
+      dots.forEach((dot, i) => dot.classList.toggle("active", i === next));
+      index = next;
+    };
+    const stop = () => { if (timer) { clearInterval(timer); timer = 0; } };
+    const start = () => {
+      stop();
+      if (slides.length > 1 && !document.hidden) timer = setInterval(() => show(index + 1), 6500);
+    };
+    dots.forEach(dot => dot.addEventListener("click", () => { show(+dot.dataset.slide); start(); }));
+    slider.addEventListener("mouseenter", stop); slider.addEventListener("mouseleave", start);
+    slider.addEventListener("focusin", stop); slider.addEventListener("focusout", start);
+    document.addEventListener("visibilitychange", () => document.hidden ? stop() : start());
+
+    const imgs = slides.map(slide => slide.querySelector("img")).filter(Boolean);
+    Promise.all(imgs.map(img => img.complete ? Promise.resolve() : (img.decode ? img.decode().catch(() => {}) : new Promise(resolve => { img.addEventListener("load", resolve, { once:true }); img.addEventListener("error", resolve, { once:true }); })))).finally(start);
   }
   function renderSocial(social) {
     const labels = { youtube: "▶", instagram: "◎", facebook: "f", awtaxation: "AW", whatsapp: "✆", linkedin: "in", twitter: "𝕏" };

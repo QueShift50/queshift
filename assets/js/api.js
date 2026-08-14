@@ -49,14 +49,35 @@
     return m ? m[1] : "";
   }
 
-  function mediaUrl(value, fallback) {
-    const text = String(value || "").trim();
-    if (!text) return fallback || "";
+  function mediaCandidates(value, fallback) {
+    const text = String(value || "").trim(), out = [];
+    const push = x => { if (x && !out.includes(x)) out.push(x); };
+    if (!text) { push(fallback || ""); return out; }
     const id = driveId(text);
-    if (!id) return text;
+    if (!id) { push(text); push(fallback || ""); return out; }
     let resourceKey = "";
     try { resourceKey = new URL(text, location.href).searchParams.get("resourcekey") || ""; } catch (_) {}
-    return "https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w2000" + (resourceKey ? "&resourcekey=" + encodeURIComponent(resourceKey) : "");
+    const key = resourceKey ? "&resourcekey=" + encodeURIComponent(resourceKey) : "";
+    push("https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w2000" + key);
+    push("https://drive.google.com/uc?export=view&id=" + encodeURIComponent(id) + key);
+    push("https://lh3.googleusercontent.com/d/" + encodeURIComponent(id) + "=w2000");
+    push(fallback || "");
+    return out;
+  }
+
+  function mediaUrl(value, fallback) {
+    return mediaCandidates(value, fallback)[0] || fallback || "";
+  }
+
+  function bindImage(img, value, fallback) {
+    const candidates = mediaCandidates(value, fallback);
+    let index = 0;
+    const next = () => {
+      if (index >= candidates.length) { img.onerror = null; return; }
+      img.src = candidates[index++];
+    };
+    img.onerror = next;
+    next();
   }
 
   function token() {
@@ -103,5 +124,5 @@
     });
   }
 
-  window.QSApi = { cfg, isConfigured, get, post, token, session, setSession, clearSession, logout, requireUser, fileToDataUrl, mediaUrl };
+  window.QSApi = { cfg, isConfigured, get, post, token, session, setSession, clearSession, logout, requireUser, fileToDataUrl, mediaUrl, mediaCandidates, bindImage };
 })();

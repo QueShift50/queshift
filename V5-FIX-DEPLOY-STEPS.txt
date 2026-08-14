@@ -1,0 +1,30 @@
+QUESHIFT V5 - OWNER PHOTO + ADMIN SIZE GUIDE + ULTRA-SMOOTH BANNER
+
+WHAT IS FIXED
+- About/Home owner cards never look blank: local professional avatar fallback is shown until a real photo is uploaded.
+- Admin > Co-Owners / Team has one-click Ajay Kumar and Wasim Raza photo upload forms.
+- Uploaded owner photo automatically appears on BOTH Home and About pages.
+- Admin shows recommended image sizes for banner, owner/team photo, logo, favicon, brand logo, blog image, QR and signature.
+- Admin > Brand & Social includes Website Favicon upload/change.
+- Banner rotation is now a preloaded cross-fade (1.35 sec) with no white flash/jump; autoplay every 6.5 sec and pauses while hovered/focused.
+- Browser favicon is force-refreshed after admin change.
+- Two professional Queshift banners remain included in assets/images.
+- Backend URL remains the same configured /exec URL.
+
+DEPLOY
+1) Apps Script: replace Code.gs with google-backend/Code.gs if V4/V5 backend is not already deployed.
+2) Apps Script > Deploy > Manage deployments > Edit > New version > Deploy. Keep the SAME /exec URL.
+3) GitHub: upload/replace all files from this V5 folder.
+4) Wait for GitHub Pages green deployment, then open https://queshift.in and press Ctrl+F5.
+5) Admin > Co-Owners / Team: upload Ajay Kumar photo and Wasim Raza photo.
+6) Admin > Brand & Social: change favicon if required.
+
+RECOMMENDED SIZES
+- Banner: 1916 x 821 px (21:9)
+- Owner/team photo: 800 x 800 px square
+- Logo: 1000 x 1000 px transparent PNG/WebP
+- Favicon: 512 x 512 px PNG/ICO
+- Brand logo: 800 x 400 px
+- Blog image: 1600 x 900 px
+- Payment QR: 1000 x 1000 px
+- Signature: 1200 x 400 px transparent PNG/WebP
