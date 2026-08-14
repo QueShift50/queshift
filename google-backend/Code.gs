@@ -28,6 +28,7 @@ function initQueshiftSystem() {
   seedSetting_('GST_RATE','18'); seedSetting_('SUPPLIER_STATE','Delhi'); seedSetting_('SELLER_NAME','AW TAXATION - QUESHIFT');
   seedSetting_('SELLER_ADDRESS','B-173, Katyani Vihar, Rajeev Nagar Extn., Begumpur, Delhi - 110086'); seedSetting_('SELLER_GSTIN',''); seedSetting_('SAC_CODE','998314');
   seedSetting_('MSME',''); seedSetting_('BANK_NAME',''); seedSetting_('BANK_ACCOUNT',''); seedSetting_('IFSC',''); seedSetting_('SOFTWARE_FILE_ID',''); seedSetting_('FAVICON_URL',''); seedSetting_('FAVICON_FILE_ID','');
+  seedSetting_('FIRST_BOOKING_DISCOUNT','20'); seedSetting_('FIRST_BOOKING_COUPON','FIRST20');
   seedSetting_('SOCIAL_JSON',JSON.stringify({awtaxation:'https://www.awtaxation.com/',whatsapp:'https://wa.me/919310907124'}));
   var plans = sheet_('PLANS'); if (plans.getLastRow() < 2) {
     appendObject_('PLANS',{CODE:'MONTHLY',NAME:'Monthly',BASE_PRICE:2500,GST_RATE:18,DAYS:30,ACTIVE:true});
@@ -63,6 +64,7 @@ function doPost(e) {
       var identity = verifyCredential_(credential);
       if (action === 'saveProfile') data = saveProfile_(identity,payload);
       else if (action === 'userDashboard') data = userDashboard_(identity);
+      else if (action === 'pricingStatus') data = pricingStatus_(identity);
       else if (action === 'paymentAttempt') data = paymentAttempt_(identity,payload);
       else if (action === 'submitComment') data = submitComment_(identity,payload);
       else if (action === 'submitReview') data = submitReview_(identity,payload);
@@ -76,6 +78,8 @@ function doPost(e) {
         else if (action === 'saveBrand') data = saveBrand_(payload);
         else if (action === 'saveVideo') data = saveVideo_(payload);
         else if (action === 'saveBlog') data = saveBlog_(payload);
+        else if (action === 'savePlan') data = savePlan_(payload);
+        else if (action === 'saveSoftwareFile') data = saveSoftwareFile_(payload);
         else if (action === 'deleteContent') data = deleteContent_(payload);
         else if (action === 'approvePayment') data = approvePayment_(identity,payload);
         else if (action === 'rejectPayment') data = updatePaymentStatus_(payload.orderId,'REJECTED');
@@ -91,7 +95,8 @@ function publicData_() {
   return {
     heroTitle:getSetting_('HERO_TITLE'), heroText:getSetting_('HERO_TEXT'), phone1:getSetting_('PHONE1'), phone2:getSetting_('PHONE2'), email:getSetting_('EMAIL'),
     logoUrl:publicMediaUrl_(getSetting_('LOGO_URL') || getSetting_('LOGO_FILE_ID')), faviconUrl:publicMediaUrl_(getSetting_('FAVICON_URL') || getSetting_('FAVICON_FILE_ID')), qrUrl:publicMediaUrl_(getSetting_('QR_URL') || getSetting_('QR_FILE_ID')), gstRate:+getSetting_('GST_RATE')||18, social:parseJson_(getSetting_('SOCIAL_JSON'),'{}'),
-    plans:rows_('PLANS').filter(active_).map(function(r){return{code:r.CODE,name:r.NAME,price:+r.BASE_PRICE,days:+r.DAYS};}),
+    offer:{percent:firstDiscountPercent_(),coupon:getSetting_('FIRST_BOOKING_COUPON')||'FIRST20'},
+    plans:rows_('PLANS').filter(active_).map(function(r){return{code:r.CODE,name:r.NAME,price:+r.BASE_PRICE,gstRate:+r.GST_RATE||(+getSetting_('GST_RATE')||18),days:+r.DAYS,active:bool_(r.ACTIVE)};}),
     banners:rows_('BANNERS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,title:r.TITLE,imageUrl:publicMediaUrl_(r.IMAGE_URL),link:r.LINK,active:bool_(r.ACTIVE)};}),
     partners:rows_('PARTNERS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,name:r.NAME,role:r.ROLE,bio:r.BIO,imageUrl:publicMediaUrl_(r.IMAGE_URL)};}),
     brands:rows_('BRANDS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,name:r.NAME,imageUrl:publicMediaUrl_(r.IMAGE_URL),url:r.URL};}),
@@ -112,7 +117,7 @@ function login_(credential,adminOnly) {
   var id=verifyGoogleToken_(credential), admin=String(id.email).toLowerCase()===String(getSetting_('ADMIN_EMAIL')||QS_ADMIN_EMAIL).toLowerCase();
   if(adminOnly&&!admin)throw new Error('This Google account is not authorised for admin access.');
   var user=findOne_('USERS','EMAIL',id.email); if(!user)appendObject_('USERS',{GOOGLE_ID:id.sub,EMAIL:id.email,NAME:id.name||'',COMPANY:'',PHONE:'',ADDRESS:'',STATE:'',PIN:'',GSTIN:'',CREATED_AT:now_(),UPDATED_AT:now_()});
-  var role=admin?'ADMIN':'CUSTOMER',sessionToken=createSession_(id,role);return{email:id.email,name:id.name||'',picture:id.picture||'',role:role,profileComplete:!!(user&&user.PHONE&&user.STATE),sessionToken:sessionToken};
+  var role=admin?'ADMIN':'CUSTOMER',sessionToken=createSession_(id,role);return{email:id.email,name:id.name||'',picture:id.picture||'',role:role,profileComplete:!!(user&&user.PHONE&&user.STATE),firstBookingEligible:admin?false:firstBookingEligible_(id.email),sessionToken:sessionToken};
 }
 function verifyGoogleToken_(token) {
   if(!token)throw new Error('Google login is required.'); var clientId=PropertiesService.getScriptProperties().getProperty('GOOGLE_CLIENT_ID'); if(!clientId)throw new Error('GOOGLE_CLIENT_ID is not configured in Apps Script.');
@@ -135,23 +140,29 @@ function userDashboard_(id) {
 }
 function userPublic_(u){return{email:u.EMAIL||'',name:u.NAME||'',company:u.COMPANY||'',phone:u.PHONE||'',address:u.ADDRESS||'',state:u.STATE||'',pin:u.PIN||'',gstin:u.GSTIN||''};}
 
+function firstDiscountPercent_(){var raw=getSetting_('FIRST_BOOKING_DISCOUNT'),n=raw===''||raw===null||raw===undefined?20:+raw;if(!isFinite(n))n=20;return Math.max(0,Math.min(100,n));}
+function firstBookingEligible_(email){return !rows_('PAYMENTS').some(function(p){var st=String(p.STATUS).toUpperCase();return String(p.USER_EMAIL).toLowerCase()===String(email).toLowerCase()&&(st==='PENDING'||st==='APPROVED');})&&!rows_('SUBSCRIPTIONS').some(function(s){return String(s.USER_EMAIL).toLowerCase()===String(email).toLowerCase();});}
+function pricingStatus_(id){return{eligible:firstBookingEligible_(id.email),percent:firstDiscountPercent_(),coupon:getSetting_('FIRST_BOOKING_COUPON')||'FIRST20'};}
+
 function paymentAttempt_(id,p) {
   var user=findOne_('USERS','EMAIL',id.email); if(!user||!user.PHONE||!user.STATE)throw new Error('Complete your customer profile before payment.');
   var plan=findOne_('PLANS','CODE',p.plan); if(!plan||!bool_(plan.ACTIVE))throw new Error('Invalid subscription plan.'); if(!p.screenshot)throw new Error('Payment screenshot is required.');
   if(p.gstin){upsertObject_('USERS','EMAIL',id.email,{GSTIN:String(p.gstin).toUpperCase().trim(),UPDATED_AT:now_()});user=findOne_('USERS','EMAIL',id.email);}
-  var gstRate=+getSetting_('GST_RATE')||+plan.GST_RATE||18,gst=round_(+plan.BASE_PRICE*(gstRate/100)),total=round_(+plan.BASE_PRICE+gst),orderId='QS'+Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMddHHmmss');
+  var eligible=firstBookingEligible_(id.email),discountPercent=eligible?firstDiscountPercent_():0,originalBase=+plan.BASE_PRICE||0,base=round_(originalBase*(1-discountPercent/100));
+  var gstRate=+getSetting_('GST_RATE')||+plan.GST_RATE||18,gst=round_(base*(gstRate/100)),total=round_(base+gst),orderId='QS'+Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'yyyyMMddHHmmss');
   var file=saveDataUrl_(p.screenshot,'Payment-'+orderId,getSubfolder_('Payment Screenshots'),false);
-  appendObject_('PAYMENTS',{ORDER_ID:orderId,USER_EMAIL:id.email,NAME:user.NAME,PHONE:user.PHONE,STATE:user.STATE,PLAN:plan.CODE,BASE_AMOUNT:plan.BASE_PRICE,GST_AMOUNT:gst,TOTAL_AMOUNT:total,UTR:clean_(p.utr),PAYMENT_DATE:p.paymentDate,SCREENSHOT_FILE_ID:file.id,SCREENSHOT_URL:file.url,STATUS:'PENDING',NOTES:clean_(p.notes),CREATED_AT:now_(),UPDATED_AT:now_()});
-  MailApp.sendEmail({to:getSetting_('ADMIN_EMAIL')||QS_ADMIN_EMAIL,subject:'Queshift payment attempt - '+orderId,htmlBody:'<h2>New payment submitted</h2><p><b>Customer:</b> '+html_(user.NAME)+'</p><p><b>Phone:</b> '+html_(user.PHONE)+'</p><p><b>State:</b> '+html_(user.STATE)+'</p><p><b>Plan:</b> '+html_(plan.NAME)+'</p><p><b>Amount:</b> ₹'+total+'</p><p><b>Order ID:</b> '+orderId+'</p><p>Open Queshift Admin Panel to view proof and approve.</p>'}); audit_(id.email,'PAYMENT_ATTEMPT',orderId); return{orderId:orderId,status:'PENDING',total:total};
+  appendObject_('PAYMENTS',{ORDER_ID:orderId,USER_EMAIL:id.email,NAME:user.NAME,PHONE:user.PHONE,STATE:user.STATE,PLAN:plan.CODE,BASE_AMOUNT:base,GST_AMOUNT:gst,TOTAL_AMOUNT:total,UTR:clean_(p.utr),PAYMENT_DATE:p.paymentDate,SCREENSHOT_FILE_ID:file.id,SCREENSHOT_URL:file.url,STATUS:'PENDING',NOTES:clean_(p.notes)+(discountPercent?' | FIRST BOOKING '+discountPercent+'% OFF ('+(getSetting_('FIRST_BOOKING_COUPON')||'FIRST20')+')':''),CREATED_AT:now_(),UPDATED_AT:now_()});
+  MailApp.sendEmail({to:getSetting_('ADMIN_EMAIL')||QS_ADMIN_EMAIL,subject:'Queshift payment attempt - '+orderId,htmlBody:'<h2>New payment submitted</h2><p><b>Customer:</b> '+html_(user.NAME)+'</p><p><b>Phone:</b> '+html_(user.PHONE)+'</p><p><b>State:</b> '+html_(user.STATE)+'</p><p><b>Plan:</b> '+html_(plan.NAME)+'</p>'+(discountPercent?'<p><b>First Booking Offer:</b> '+discountPercent+'% OFF · '+html_(getSetting_('FIRST_BOOKING_COUPON')||'FIRST20')+'<br><b>Original:</b> ₹'+originalBase+' · <b>Discounted taxable:</b> ₹'+base+'</p>':'')+'<p><b>Amount:</b> ₹'+total+'</p><p><b>Order ID:</b> '+orderId+'</p><p>Open Queshift Admin Panel to view proof and approve.</p>'}); audit_(id.email,'PAYMENT_ATTEMPT',orderId+(discountPercent?' FIRST'+discountPercent:''));
+  return{orderId:orderId,status:'PENDING',total:total,baseAmount:base,originalBase:originalBase,discountPercent:discountPercent,coupon:getSetting_('FIRST_BOOKING_COUPON')||'FIRST20'};
 }
 
 function adminDashboard_() {
   var settings=settingsObject_(), users=rows_('USERS'), payments=rows_('PAYMENTS'), subs=rows_('SUBSCRIPTIONS'), blogs=rows_('BLOGS'), invoices=rows_('INVOICES');
-  return{settings:{heroTitle:settings.HERO_TITLE,heroText:settings.HERO_TEXT,phone1:settings.PHONE1,phone2:settings.PHONE2,email:settings.EMAIL,gstRate:settings.GST_RATE,supplierState:settings.SUPPLIER_STATE,sellerName:settings.SELLER_NAME,sellerAddress:settings.SELLER_ADDRESS,sellerGstin:settings.SELLER_GSTIN,sacCode:settings.SAC_CODE,bankName:settings.BANK_NAME,bankAccount:settings.BANK_ACCOUNT,ifsc:settings.IFSC,msme:settings.MSME,logoUrl:publicMediaUrl_(settings.LOGO_URL||settings.LOGO_FILE_ID),faviconUrl:publicMediaUrl_(settings.FAVICON_URL||settings.FAVICON_FILE_ID),qrUrl:publicMediaUrl_(settings.QR_URL||settings.QR_FILE_ID)},social:parseJson_(settings.SOCIAL_JSON,'{}'),counts:{customers:users.length,pendingPayments:payments.filter(function(p){return p.STATUS==='PENDING';}).length,activeSubscriptions:subs.filter(function(s){return s.STATUS==='ACTIVE';}).length,publishedBlogs:blogs.filter(function(b){return b.STATUS==='PUBLISHED';}).length},banners:publicData_().banners,partners:publicData_().partners,brands:publicData_().brands,videos:publicData_().videos,blogs:blogs.map(function(b){return{id:b.ID,title:b.TITLE,slug:b.SLUG,status:b.STATUS};}),payments:payments.slice().reverse().map(function(p){return{orderId:p.ORDER_ID,name:p.NAME,phone:p.PHONE,state:p.STATE,plan:p.PLAN,amount:p.TOTAL_AMOUNT,screenshotUrl:p.SCREENSHOT_URL,status:p.STATUS};}),reviews:rows_('REVIEWS').concat(rows_('COMMENTS').map(function(c){return{ID:c.ID,NAME:c.NAME,RATING:0,COMMENT:'Blog '+c.BLOG_SLUG+': '+c.COMMENT,STATUS:c.STATUS,REPLY:c.REPLY};})).map(function(r){return{id:r.ID,name:r.NAME,rating:r.RATING,comment:r.COMMENT,status:r.STATUS,reply:r.REPLY};}),customers:users.map(function(u){var s=latest_('SUBSCRIPTIONS','USER_EMAIL',u.EMAIL);return{name:u.NAME,email:u.EMAIL,phone:u.PHONE,state:u.STATE,plan:s?s.PLAN:''};}),invoices:invoices.slice().reverse().map(function(i){return{invoiceNumber:i.INVOICE_NUMBER,customer:i.CUSTOMER_NAME,total:i.TOTAL,pdfUrl:i.PDF_URL};})};
+  return{settings:{heroTitle:settings.HERO_TITLE,heroText:settings.HERO_TEXT,phone1:settings.PHONE1,phone2:settings.PHONE2,email:settings.EMAIL,gstRate:settings.GST_RATE,supplierState:settings.SUPPLIER_STATE,sellerName:settings.SELLER_NAME,sellerAddress:settings.SELLER_ADDRESS,sellerGstin:settings.SELLER_GSTIN,sacCode:settings.SAC_CODE,bankName:settings.BANK_NAME,bankAccount:settings.BANK_ACCOUNT,ifsc:settings.IFSC,msme:settings.MSME,firstDiscount:settings.FIRST_BOOKING_DISCOUNT||20,couponCode:settings.FIRST_BOOKING_COUPON||'FIRST20',softwareFileId:settings.SOFTWARE_FILE_ID||'',logoUrl:publicMediaUrl_(settings.LOGO_URL||settings.LOGO_FILE_ID),faviconUrl:publicMediaUrl_(settings.FAVICON_URL||settings.FAVICON_FILE_ID),qrUrl:publicMediaUrl_(settings.QR_URL||settings.QR_FILE_ID)},social:parseJson_(settings.SOCIAL_JSON,'{}'),plans:rows_('PLANS').map(function(r){return{code:r.CODE,name:r.NAME,price:+r.BASE_PRICE,gstRate:+r.GST_RATE||(+settings.GST_RATE||18),days:+r.DAYS,active:bool_(r.ACTIVE)};}),counts:{customers:users.length,pendingPayments:payments.filter(function(p){return p.STATUS==='PENDING';}).length,activeSubscriptions:subs.filter(function(s){return s.STATUS==='ACTIVE';}).length,publishedBlogs:blogs.filter(function(b){return b.STATUS==='PUBLISHED';}).length},banners:publicData_().banners,partners:publicData_().partners,brands:publicData_().brands,videos:publicData_().videos,blogs:blogs.map(function(b){return{id:b.ID,title:b.TITLE,slug:b.SLUG,status:b.STATUS};}),payments:payments.slice().reverse().map(function(p){return{orderId:p.ORDER_ID,name:p.NAME,phone:p.PHONE,state:p.STATE,plan:p.PLAN,amount:p.TOTAL_AMOUNT,screenshotUrl:p.SCREENSHOT_URL,status:p.STATUS};}),reviews:rows_('REVIEWS').concat(rows_('COMMENTS').map(function(c){return{ID:c.ID,NAME:c.NAME,RATING:0,COMMENT:'Blog '+c.BLOG_SLUG+': '+c.COMMENT,STATUS:c.STATUS,REPLY:c.REPLY};})).map(function(r){return{id:r.ID,name:r.NAME,rating:r.RATING,comment:r.COMMENT,status:r.STATUS,reply:r.REPLY};}),customers:users.map(function(u){var s=latest_('SUBSCRIPTIONS','USER_EMAIL',u.EMAIL);return{name:u.NAME,email:u.EMAIL,phone:u.PHONE,state:u.STATE,plan:s?s.PLAN:''};}),invoices:invoices.slice().reverse().map(function(i){return{invoiceNumber:i.INVOICE_NUMBER,customer:i.CUSTOMER_NAME,total:i.TOTAL,pdfUrl:i.PDF_URL};})};
 }
 
 function saveSettings_(p) {
-  var map={heroTitle:'HERO_TITLE',heroText:'HERO_TEXT',phone1:'PHONE1',phone2:'PHONE2',email:'EMAIL',gstRate:'GST_RATE',supplierState:'SUPPLIER_STATE',sellerName:'SELLER_NAME',sellerAddress:'SELLER_ADDRESS',sellerGstin:'SELLER_GSTIN',sacCode:'SAC_CODE',bankName:'BANK_NAME',bankAccount:'BANK_ACCOUNT',ifsc:'IFSC',msme:'MSME'};
+  var map={heroTitle:'HERO_TITLE',heroText:'HERO_TEXT',phone1:'PHONE1',phone2:'PHONE2',email:'EMAIL',gstRate:'GST_RATE',supplierState:'SUPPLIER_STATE',sellerName:'SELLER_NAME',sellerAddress:'SELLER_ADDRESS',sellerGstin:'SELLER_GSTIN',sacCode:'SAC_CODE',bankName:'BANK_NAME',bankAccount:'BANK_ACCOUNT',ifsc:'IFSC',msme:'MSME',firstDiscount:'FIRST_BOOKING_DISCOUNT',couponCode:'FIRST_BOOKING_COUPON'};
   Object.keys(map).forEach(function(k){if(p[k]!==undefined&&p[k]!=='')setSetting_(map[k],clean_(p[k]));});
   if(p.logo){var logo=saveDataUrl_(p.logo,'Queshift-Logo',getSubfolder_('Public Media'),true);setSetting_('LOGO_URL',logo.publicUrl);setSetting_('LOGO_FILE_ID',logo.id);} if(p.favicon){var fav=saveDataUrl_(p.favicon,'Queshift-Favicon',getSubfolder_('Public Media'),true);setSetting_('FAVICON_URL',fav.publicUrl);setSetting_('FAVICON_FILE_ID',fav.id);}
   if(p.qr){var qr=saveDataUrl_(p.qr,'Payment-QR',getSubfolder_('Public Media'),true);setSetting_('QR_FILE_ID',qr.id);setSetting_('QR_URL',qr.publicUrl);}
@@ -159,6 +170,19 @@ function saveSettings_(p) {
   return{saved:true};
 }
 function saveSocial_(p){var social={},standard=['youtube','instagram','facebook','linkedin','twitter','awtaxation','whatsapp'];standard.forEach(function(k){social[k]=clean_(p[k]);});social.custom=[];[1,2].forEach(function(i){if(p['customUrl'+i])social.custom.push({label:clean_(p['customLabel'+i])||'Link',icon:clean_(p['customLabel'+i]).slice(0,2)||'+',url:clean_(p['customUrl'+i])});});setSetting_('SOCIAL_JSON',JSON.stringify(social));return{saved:true};}
+function savePlan_(p){
+  var code=String(p.code||'').toUpperCase().trim().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'');
+  if(!code)code=String(p.name||'PLAN').toUpperCase().trim().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'')||('PLAN_'+Date.now());
+  var name=clean_(p.name);if(!name)throw new Error('Plan name is required.');
+  var price=+p.price,days=+p.days,gst=+p.gstRate||(+getSetting_('GST_RATE')||18);
+  if(!isFinite(price)||price<0)throw new Error('Enter a valid plan price.');if(!isFinite(days)||days<1)throw new Error('Enter valid subscription days.');
+  upsertObject_('PLANS','CODE',code,{CODE:code,NAME:name,BASE_PRICE:round_(price),GST_RATE:gst,DAYS:Math.round(days),ACTIVE:bool_(p.active)});
+  return{saved:true,code:code};
+}
+function saveSoftwareFile_(p){
+  var id=extractDriveId_(p.softwareFile||p.softwareFileId||'');if(!id)throw new Error('Paste a valid Google Drive software file link or file ID.');
+  var file=DriveApp.getFileById(id);setSetting_('SOFTWARE_FILE_ID',id);return{saved:true,fileId:id,name:file.getName(),url:file.getUrl()};
+}
 function saveBanner_(p){var f=saveDataUrl_(p.image,'Banner-'+Date.now(),getSubfolder_('Public Media'),true);appendObject_('BANNERS',{ID:uuid_(),TITLE:clean_(p.title),IMAGE_URL:f.publicUrl,LINK:clean_(p.link),SORT_ORDER:+p.sortOrder||1,ACTIVE:bool_(p.active),UPDATED_AT:now_()});return{saved:true};}
 function savePartner_(p){var name=clean_(p.name);if(!name)throw new Error('Partner name is required.');var existing=findOne_('PARTNERS','NAME',name),imageUrl=existing?existing.IMAGE_URL:'';if(p.image)imageUrl=saveDataUrl_(p.image,'Partner-'+name,getSubfolder_('Public Media'),true).publicUrl;var role=clean_(p.role)||(existing&&existing.ROLE)||'Co-Owner, Queshift',bio=(p.bio===undefined||p.bio===null)?((existing&&existing.BIO)||''):clean_(p.bio);upsertObject_('PARTNERS','NAME',name,{ID:existing?existing.ID:uuid_(),NAME:name,ROLE:role,BIO:bio,IMAGE_URL:imageUrl,SORT_ORDER:existing?(+existing.SORT_ORDER||1):rows_('PARTNERS').length+1,ACTIVE:true,UPDATED_AT:now_()});return{saved:true,updated:!!existing};}
 function saveBrand_(p){var f=p.image?saveDataUrl_(p.image,'Brand-'+clean_(p.name),getSubfolder_('Public Media'),true):{publicUrl:''};appendObject_('BRANDS',{ID:uuid_(),NAME:clean_(p.name),IMAGE_URL:f.publicUrl,URL:clean_(p.url),SORT_ORDER:+p.sortOrder||1,ACTIVE:true,UPDATED_AT:now_()});return{saved:true};}

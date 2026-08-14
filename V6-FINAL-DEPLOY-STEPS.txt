@@ -1,0 +1,81 @@
+QUESHIFT V6 FINAL UPDATE
+========================
+
+Included updates
+----------------
+1. Admin > Pricing & Downloads:
+   - Edit existing plan price without deleting it.
+   - Add new price plans.
+   - Change days, GST and Active/Hidden status.
+   - Change First Booking Discount % and coupon code.
+   - Save the secure Google Drive software file link / File ID.
+
+2. First Booking Offer:
+   - Logged-out visitors see original price crossed out plus 20% OFF and discounted price.
+   - Coupon shown: FIRST20.
+   - After Google login the Apps Script backend checks booking history.
+   - Discount is applied automatically only when eligible.
+   - Backend recalculates the payable amount; frontend price cannot override it.
+   - A Pending or Approved first booking marks the offer as used; a Rejected attempt can become eligible again.
+
+3. Co-owner photos:
+   - Click/tap Ajay Kumar or Wasim Raza photo on Home/About to open a zoom popup.
+   - Esc, close button, or outside click closes the popup.
+
+4. Announcement strip:
+   - Moved from the very top of Home page to immediately before the footer.
+
+5. Banner assets included:
+   - assets/images/queshift-first20-banner.png
+   - assets/images/dc-software-channel-banner.png
+
+DEPLOY — STEP 1: APPS SCRIPT
+-----------------------------
+Google Sheet > Extensions > Apps Script
+Open Code.gs.
+Replace the ENTIRE old Code.gs with:
+    google-backend/Code.gs
+Save.
+
+Then:
+Deploy > Manage deployments > Edit (pencil) > Version: New version > Deploy
+IMPORTANT: Update the existing deployment. Do not create a new deployment, so your current /exec URL remains unchanged.
+
+Existing backend URL configured in website:
+https://script.google.com/macros/s/AKfycbxnjTu6umxT2akEGnlLh-F2Nsq-r_3LrkMDr-NXl3ErvVYLAEcjk7W8zCp6lBDEoUGt8A/exec
+
+For an already initialized Queshift sheet, initQueshiftSystem does NOT need to be run again for this update.
+For a completely new sheet/project only, run initQueshiftSystem once.
+
+DEPLOY — STEP 2: GITHUB
+------------------------
+Upload/replace ALL files and folders from this V6 folder in the existing GitHub repository.
+Keep CNAME and .nojekyll included.
+Wait for GitHub Pages deployment to show a green check.
+
+DEPLOY — STEP 3: REFRESH AND TEST
+----------------------------------
+Open https://queshift.in and press Ctrl+F5.
+
+Test A — Logged out Pricing:
+Pricing & Downloads should show:
+- original price crossed out
+- 20% OFF
+- discounted price as the main price
+- FIRST20 coupon
+
+Test B — First customer login:
+Google Login > Pricing & Downloads.
+Eligible customer should keep the 20% first-booking price.
+Returning customer should see regular price.
+
+Test C — Admin:
+Admin > Pricing & Downloads
+- Edit an existing plan and Save.
+- Add a new plan and Save.
+- Change First Booking Discount / FIRST20 if required.
+- Paste Google Drive software file link / ID if you want approved customers to receive software access.
+
+Test D — Owner photo zoom:
+Home or About > click a co-owner photo > popup should open.
+

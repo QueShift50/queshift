@@ -66,7 +66,7 @@
   function bindDelete() { document.querySelectorAll("[data-delete-type]").forEach(b => b.onclick = () => confirm("Remove this item?") && action("deleteContent", { type: b.dataset.deleteType, id: b.dataset.deleteId })); }
   function fillSettings() {
     const s = dashboard.settings || {}, social = document.querySelector('[data-action="saveSocial"]');
-    const keys = ["heroTitle","heroText","phone1","phone2","email","gstRate","supplierState","sellerName","sellerAddress","sellerGstin","sacCode","msme","bankName","bankAccount","ifsc"];
+    const keys = ["heroTitle","heroText","phone1","phone2","email","gstRate","supplierState","sellerName","sellerAddress","sellerGstin","sacCode","msme","bankName","bankAccount","ifsc","firstDiscount","couponCode","softwareFileId"];
     document.querySelectorAll('[data-action="saveSettings"]').forEach(form => keys.forEach(k => {
       if (form.elements[k]) form.elements[k].value = s[k] || form.elements[k].value || "";
     }));
@@ -79,18 +79,60 @@
       bindAdminMedia(preview);
     }
   }
+  function planOptions(selected) {
+    return (dashboard.plans || []).map(p => `<option value="${esc(p.code)}" ${String(p.code)===String(selected)?"selected":""}>${esc(p.name)} (${esc(p.code)})${p.active===false?" — Hidden":""}</option>`).join("") + '<option value="CUSTOM">Custom Days</option>';
+  }
+  function renderPlans() {
+    const wrap = document.querySelector("[data-admin-plans]"); if (!wrap) return;
+    const plans = dashboard.plans || [];
+    wrap.innerHTML = plans.map(p => `<article class="plan-admin-row">
+      <div><b>${esc(p.name)}</b><small>${esc(p.code)} · ${Number(p.days||0)} days · GST ${Number(p.gstRate||0)}%</small></div>
+      <strong>₹${Number(p.price||0).toLocaleString("en-IN")}</strong>
+      <span class="badge ${p.active===false?"warn":""}">${p.active===false?"Hidden":"Active"}</span>
+      <button type="button" data-edit-plan="${esc(p.code)}">Edit</button>
+    </article>`).join("") || '<p class="empty-state">No plans yet. Add your first price plan above.</p>';
+
+    document.querySelectorAll("[data-edit-plan]").forEach(button => button.onclick = () => {
+      const plan = plans.find(x => String(x.code) === String(button.dataset.editPlan)); if (!plan) return;
+      const form = document.querySelector("[data-plan-form]"); if (!form) return;
+      form.elements.code.value = plan.code || "";
+      form.elements.name.value = plan.name || "";
+      form.elements.price.value = plan.price ?? "";
+      form.elements.days.value = plan.days ?? "";
+      form.elements.gstRate.value = plan.gstRate ?? (dashboard.settings?.gstRate || 18);
+      form.elements.active.value = plan.active === false ? "false" : "true";
+      const heading = form.querySelector("[data-plan-form-title]"); if (heading) heading.textContent = `Edit Plan — ${plan.name}`;
+      const save = form.querySelector("[data-plan-save]"); if (save) save.textContent = "Update Price Plan";
+      go("pricing");
+      form.scrollIntoView({ behavior:"smooth", block:"start" });
+    });
+    const fresh = document.querySelector("[data-new-plan]");
+    if (fresh) fresh.onclick = () => {
+      const form = document.querySelector("[data-plan-form]"); if (!form) return;
+      form.reset(); form.elements.gstRate.value = dashboard.settings?.gstRate || 18; form.elements.active.value = "true";
+      const heading = form.querySelector("[data-plan-form-title]"); if (heading) heading.textContent = "Add New Price Plan";
+      const save = form.querySelector("[data-plan-save]"); if (save) save.textContent = "Save Price Plan";
+    };
+    const form = document.querySelector("[data-plan-form]");
+    if (form && !String(form.elements.code.value || "").trim()) {
+      form.elements.gstRate.value = dashboard.settings?.gstRate || form.elements.gstRate.value || 18;
+      const heading = form.querySelector("[data-plan-form-title]"); if (heading) heading.textContent = "Add New Price Plan";
+      const save = form.querySelector("[data-plan-save]"); if (save) save.textContent = "Save Price Plan";
+    }
+  }
+
   function render() {
     const c = dashboard.counts || {}; document.querySelector("[data-admin-stats]").innerHTML = [[c.customers||0,"Customers"],[c.pendingPayments||0,"Pending Payments"],[c.activeSubscriptions||0,"Active Subscriptions"],[c.publishedBlogs||0,"Published Blogs"]].map(([n,l]) => `<article><small>${l}</small><h3>${n}</h3><span class="badge">Live Data</span></article>`).join("");
     document.querySelector("[data-admin-banners]").innerHTML = media(dashboard.banners,"BANNERS"); document.querySelector("[data-admin-partners]").innerHTML = media(dashboard.partners,"PARTNERS"); document.querySelector("[data-admin-brands]").innerHTML = media(dashboard.brands,"BRANDS"); document.querySelector("[data-admin-videos]").innerHTML = media(dashboard.videos,"VIDEOS");
     document.querySelector("[data-admin-blogs]").innerHTML = (dashboard.blogs||[]).map(x => `<article><span><b>${esc(x.title)}</b><br><small>/${esc(x.slug)} · ${esc(x.status)}</small></span><a href="blog.html?slug=${encodeURIComponent(x.slug)}" target="_blank">View</a><button data-delete-type="BLOGS" data-delete-id="${esc(x.id)}">Remove</button></article>`).join("") || '<p class="empty-state">No blogs yet.</p>';
-    document.querySelector("[data-admin-payments]").innerHTML = (dashboard.payments||[]).map(x => `<tr><td><b>${esc(x.orderId)}</b><br>${esc(x.name)}<br><small>${esc(x.phone)} · ${esc(x.state)}</small></td><td>${esc(x.plan)}</td><td>₹${Number(x.amount||0).toLocaleString("en-IN")}</td><td><a href="${esc(x.screenshotUrl)}" target="_blank" rel="noopener">View Screenshot</a></td><td><span class="badge ${x.status==='PENDING'?'warn':''}">${esc(x.status)}</span></td><td>${x.status==='PENDING'?`<select data-plan-for="${esc(x.orderId)}"><option value="MONTHLY" ${x.plan==='MONTHLY'?'selected':''}>Monthly</option><option value="HALF_YEARLY" ${x.plan==='HALF_YEARLY'?'selected':''}>Half-Yearly</option><option value="YEARLY" ${x.plan==='YEARLY'?'selected':''}>Yearly</option><option value="CUSTOM">Custom Days</option></select><input data-days-for="${esc(x.orderId)}" type="number" placeholder="Days"><button class="approve-btn" data-approve="${esc(x.orderId)}">Approve</button><button class="reject-btn" data-reject="${esc(x.orderId)}">Reject</button>`:"—"}</td></tr>`).join("") || '<tr><td colspan="6">No payment attempts.</td></tr>';
+    document.querySelector("[data-admin-payments]").innerHTML = (dashboard.payments||[]).map(x => `<tr><td><b>${esc(x.orderId)}</b><br>${esc(x.name)}<br><small>${esc(x.phone)} · ${esc(x.state)}</small></td><td>${esc(x.plan)}</td><td>₹${Number(x.amount||0).toLocaleString("en-IN")}</td><td><a href="${esc(x.screenshotUrl)}" target="_blank" rel="noopener">View Screenshot</a></td><td><span class="badge ${x.status==='PENDING'?'warn':''}">${esc(x.status)}</span></td><td>${x.status==='PENDING'?`<select data-plan-for="${esc(x.orderId)}">${planOptions(x.plan)}</select><input data-days-for="${esc(x.orderId)}" type="number" placeholder="Days"><button class="approve-btn" data-approve="${esc(x.orderId)}">Approve</button><button class="reject-btn" data-reject="${esc(x.orderId)}">Reject</button>`:"—"}</td></tr>`).join("") || '<tr><td colspan="6">No payment attempts.</td></tr>';
     document.querySelectorAll("[data-approve]").forEach(b => b.onclick = () => action("approvePayment", { orderId:b.dataset.approve, plan:document.querySelector(`[data-plan-for="${b.dataset.approve}"]`).value, days:document.querySelector(`[data-days-for="${b.dataset.approve}"]`).value }));
     document.querySelectorAll("[data-reject]").forEach(b => b.onclick = () => action("rejectPayment", { orderId:b.dataset.reject }));
     document.querySelector("[data-admin-reviews]").innerHTML = (dashboard.reviews||[]).map(x => `<article><span><b>${"★".repeat(+x.rating||0)} ${esc(x.name)}</b><br>${esc(x.comment)}<br><small>${esc(x.status)}${x.reply?" · Reply: "+esc(x.reply):""}</small></span><button data-review-approve="${esc(x.id)}">Approve</button><button data-review-reply="${esc(x.id)}">Reply</button><button data-delete-type="REVIEWS" data-delete-id="${esc(x.id)}">Remove</button></article>`).join("") || '<p class="empty-state">No reviews or comments.</p>';
     document.querySelectorAll("[data-review-approve]").forEach(b => b.onclick = () => action("reviewAction", { id:b.dataset.reviewApprove, task:"APPROVE" })); document.querySelectorAll("[data-review-reply]").forEach(b => b.onclick = () => { const reply = prompt("Enter public reply:"); if (reply) action("reviewAction", { id:b.dataset.reviewReply, task:"REPLY", reply }); });
     document.querySelector("[data-admin-customers]").innerHTML = (dashboard.customers||[]).map(x => `<article><span><b>${esc(x.name||x.email)}</b><br><small>${esc(x.email)} · ${esc(x.phone)} · ${esc(x.state)}</small></span><em>${esc(x.plan||"No plan")}</em></article>`).join("") || '<p class="empty-state">No customers yet.</p>';
     document.querySelector("[data-admin-invoices]").innerHTML = (dashboard.invoices||[]).map(x => `<article><span><b>${esc(x.invoiceNumber)}</b><br><small>${esc(x.customer)} · ₹${esc(x.total)}</small></span><a href="${esc(x.pdfUrl)}" target="_blank">PDF</a></article>`).join("") || '<p class="empty-state">No invoices yet.</p>';
-    fillSettings(); bindDelete(); bindAdminMedia(document);
+    renderPlans(); fillSettings(); bindDelete(); bindAdminMedia(document);
   }
   async function load() { try { dashboard = await QSApi.post("adminDashboard", {}, QSApi.token()); render(); note("Dashboard is up to date."); } catch (error) { note(error.message, true); if (/token|admin|author/i.test(error.message)) setTimeout(() => { QSApi.clearSession(); location.href = "admin.html"; }, 1200); } }
   setupUploadGuidance();

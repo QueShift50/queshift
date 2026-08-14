@@ -9,7 +9,9 @@
     faviconUrl: "favicon-32x32.png",
     banners: [
       { title: "E-commerce Accounting & Reconciliation", imageUrl: "assets/images/queshift-banner-1.png", link: "contact.html" },
-      { title: "Designed for Marketplace Sellers and Growing Brands", imageUrl: "assets/images/queshift-banner-2.png", link: "about.html" }
+      { title: "Designed for Marketplace Sellers and Growing Brands", imageUrl: "assets/images/queshift-banner-2.png", link: "about.html" },
+      { title: "20% OFF on First Booking — FIRST20", imageUrl: "assets/images/queshift-first20-banner.png", link: "downloads.html" },
+      { title: "DC Software Tutorials & Training Videos", imageUrl: "assets/images/dc-software-channel-banner.png", link: "https://www.youtube.com/@DC-Software" }
     ],
     partners: [{ name: "Ajay Kumar", role: "Co-Owner, Queshift", imageUrl: "" }, { name: "Wasim Raza", role: "Co-Owner, Queshift", imageUrl: "" }],
     brands: ["Amazon", "Flipkart", "Myntra", "Meesho", "AJIO", "Nykaa", "JioMart", "Snapdeal", "D2C Websites", "Multi-channel Brands"],
@@ -150,6 +152,36 @@
     const n = String(name || "").toLowerCase();
     return n.includes("wasim") ? "assets/images/owner-wasim-placeholder.svg" : "assets/images/owner-ajay-placeholder.svg";
   }
+  function closeOwnerZoom() {
+    const lightbox = document.querySelector(".owner-lightbox");
+    if (!lightbox) return;
+    lightbox.classList.remove("open");
+    setTimeout(() => lightbox.remove(), 220);
+  }
+  function openOwnerZoom(img, name) {
+    closeOwnerZoom();
+    const lightbox = document.createElement("div");
+    lightbox.className = "owner-lightbox";
+    lightbox.innerHTML = `<div class="owner-lightbox-dialog" role="dialog" aria-modal="true" aria-label="${esc(name || "Co-owner photo")}">
+      <button type="button" class="owner-lightbox-close" aria-label="Close photo">×</button>
+      <img src="${esc(img.currentSrc || img.src)}" alt="${esc(name || img.alt || "Co-owner")}">
+      <strong>${esc(name || img.alt || "")}</strong>
+    </div>`;
+    document.body.appendChild(lightbox);
+    requestAnimationFrame(() => lightbox.classList.add("open"));
+    lightbox.addEventListener("click", e => { if (e.target === lightbox) closeOwnerZoom(); });
+    lightbox.querySelector(".owner-lightbox-close").onclick = closeOwnerZoom;
+    document.addEventListener("keydown", function escOwner(e){ if(e.key==="Escape"){ closeOwnerZoom(); document.removeEventListener("keydown",escOwner); } });
+  }
+  function bindOwnerZoom(root) {
+    (root || document).querySelectorAll(".owner-photo").forEach(img => {
+      if (img.dataset.zoomBound) return;
+      img.dataset.zoomBound = "1"; img.tabIndex = 0; img.setAttribute("role","button"); img.setAttribute("aria-label",`View ${img.alt || "co-owner"} photo`);
+      img.addEventListener("click", () => openOwnerZoom(img, img.alt));
+      img.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOwnerZoom(img, img.alt); } });
+    });
+  }
+
   function renderPartners(partners) {
     document.querySelectorAll("[data-partners]").forEach(wrap => {
       wrap.innerHTML = partners.map(p => {
@@ -158,6 +190,7 @@
         return `<article class="owner">${photo}<div><h3>${esc(p.name)}</h3><b>${esc(p.role || "Co-Owner, Queshift")}</b><p>${esc(p.bio || "Building practical e-commerce accounting and reconciliation solutions for growing sellers.")}</p></div></article>`;
       }).join("");
       bindMedia(wrap);
+      bindOwnerZoom(wrap);
     });
   }
   function renderBanners(banners) {
