@@ -1,20 +1,14 @@
-QUESHIFT GITHUB PAGES UPLOAD INSTRUCTIONS
+Queshift V2 GitHub Upload Pack
+==============================
 
-1. Extract Queshift-GitHub-Pages-Ready.zip on your computer.
-2. Open your GitHub repository: QueShift50/queshift.
-3. Click Add file > Upload files.
-4. Upload ALL files and the assets folder from inside this extracted folder.
-5. Do not upload only the ZIP file.
-6. Commit changes.
-7. Open Repository Settings > Pages.
-8. Select: Deploy from a branch > main > /(root) > Save.
-9. Custom domain is already set in CNAME as: queshift.in
-10. First test the github.io URL before changing domain DNS.
+This package includes the responsive public website, secure Google customer
+login, separate Google-authorised admin panel, pricing/payment workflow, blogs,
+reviews, Google Sheets database and private Google Drive download workflow.
 
-Sample Admin Login:
-Username: admin
-Password: 2026
+Start with SETUP-GUIDE.txt. Complete only one 2–3 step group at a time.
 
-Important:
-The static admin saves changes only in the same browser. Google Sheets,
-Google Drive and secure Google login will be connected in the next stage.
+Website: https://queshift.in
+Admin: https://queshift.in/admin.html
+Customer login: https://queshift.in/login.html
+
+No admin username or password is stored in the website source.
