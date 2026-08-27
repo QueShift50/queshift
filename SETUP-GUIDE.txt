@@ -1,4 +1,4 @@
-QUESHIFT V4 — GOOGLE SHEETS + DRIVE + GITHUB PAGES SETUP
+QUESHIFT V2 — GOOGLE SHEETS + DRIVE + GITHUB PAGES SETUP
 ========================================================
 
 IMPORTANT
@@ -66,7 +66,7 @@ PART D — GITHUB UPLOAD (Steps 10–12)
     Keep Enforce HTTPS enabled.
 
 12. Wait for GitHub deployment. Open https://queshift.in/admin.html and sign in
-    only with info.queshift@gmail.com. Add logo, favicon, banners, co-owner/team photos,
+    only with info.queshift@gmail.com. Add logo, banners, co-partner photos,
     brands, social links, YouTube video, invoice details and payment QR.
 
 FINAL AUTOMATION
@@ -97,15 +97,3 @@ Official references:
 https://developers.google.com/apps-script/guides/web
 https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
 https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site
-
-
-V4 MEDIA RECOMMENDATIONS
-------------------------
-• Website logo: 1000 × 1000 px transparent PNG/WebP.
-• Favicon: 512 × 512 px square PNG/ICO.
-• Homepage banner: 1916 × 821 px (21:9).
-• Co-owner/team photo: 800 × 800 px square portrait.
-• Supporting brand logo: 800 × 400 px, transparent preferred.
-• Payment QR: 1000 × 1000 px square.
-• Signature: 1200 × 400 px transparent PNG/WebP.
-• Blog featured image: 1600 × 900 px (16:9).

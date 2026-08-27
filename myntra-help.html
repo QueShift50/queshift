@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Queshift Myntra - Client Help</title>
+<link rel="stylesheet" href="assets/css/v2.css">
+<style>
+:root{
+  --navy:#17365d;--blue:#2f75b5;--sky:#d9eaf7;--green:#e2f0d9;
+  --orange:#fce4d6;--red:#f4cccc;--yellow:#fff2cc;--purple:#e4dfec;
+  --line:#c8d5e7;--text:#14233b;--bg:#eef3f9
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Segoe UI,Arial,sans-serif;line-height:1.55}
+header{background:linear-gradient(120deg,#17365d,#2f75b5);color:#fff;padding:28px 20px}
+header h1{margin:0 0 6px;font-size:29px} header p{margin:0;opacity:.94}
+.wrap{max-width:1200px;margin:auto;padding:18px}
+.langbar{position:sticky;top:0;z-index:10;background:#eef3f9;padding:10px 0}
+.langbar button{border:1px solid var(--line);background:#fff;color:var(--navy);padding:9px 14px;border-radius:8px;font-weight:700;margin-right:6px;cursor:pointer}
+.langbar button.active{background:var(--navy);color:#fff}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;margin:14px 0;padding:18px;box-shadow:0 2px 10px #17365d14}
+h2{margin-top:0;color:var(--navy);border-bottom:2px solid var(--sky);padding-bottom:7px}
+h3{color:var(--blue)}
+table{width:100%;border-collapse:collapse;margin:10px 0}
+th{background:var(--navy);color:#fff;text-align:left}
+th,td{border:1px solid var(--line);padding:8px;vertical-align:top}
+code{background:#f5f7fb;border:1px solid #dbe4f0;border-radius:5px;padding:2px 5px}
+.note,.warn,.ok{padding:12px;border-radius:7px;margin:10px 0}
+.note{background:var(--sky);border-left:5px solid var(--blue)}
+.warn{background:#fff1f1;border-left:5px solid #c00000}
+.ok{background:var(--green);border-left:5px solid #548235}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.box{padding:13px;border:1px solid var(--line);border-radius:9px;font-weight:700}
+.green{background:var(--green)} .red{background:var(--red)} .orange{background:var(--orange)}
+.yellow{background:var(--yellow)} .purple{background:var(--purple)} .sky{background:var(--sky)}
+.lang{display:none}.lang.active{display:block}
+.small{font-size:13px;color:#5e6d84}
+footer{text-align:center;color:#66758a;padding:24px}
+@media(max-width:650px){header h1{font-size:22px}.wrap{padding:10px}.card{padding:13px}table{font-size:12px}}
+</style>
+<script>
+function showLang(id){
+  document.querySelectorAll('.lang').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.langbar button').forEach(x=>x.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('btn-'+id).classList.add('active');
+  localStorage.setItem('myntraHelpLang',id);
+}
+window.addEventListener('DOMContentLoaded',()=>{
+  showLang(localStorage.getItem('myntraHelpLang')||'hinglish');
+});
+</script>
+</head>
+<body>
+<div style="max-width:1200px;margin:12px auto 0;padding:0 18px"><a href="help.html" style="display:inline-block;padding:9px 13px;border-radius:9px;color:#fff;background:#075bb8;text-decoration:none;font-weight:700">← Back to Queshift Help Centre</a></div>
+<header>
+<h1>Queshift Myntra Accounting & Reconciliation</h1>
+<p>Client Help • English • Hinglish • हिन्दी</p>
+</header>
+<div class="wrap">
+<div class="langbar">
+<button id="btn-english" onclick="showLang('english')">English</button>
+<button id="btn-hinglish" onclick="showLang('hinglish')">Hinglish</button>
+<button id="btn-hindi" onclick="showLang('hindi')">हिन्दी</button>
+</div>
+
+<!-- ========================== ENGLISH ========================== -->
+<div class="lang" id="english">
+<section class="card">
+<h2>1. How to start Myntra</h2>
+<p>When Myntra is opened from the main Queshift dashboard, the company is already selected in Queshift. Myntra opens directly for that company. A second company-selection box is not shown.</p>
+<p>If the developer/network test BAT is run directly, a company-selection box may appear. That is only for direct testing.</p>
+<div class="note"><b>Saved settings:</b> B2B/B2C, HSN/SKU mode, selected period, Tally/BUSY mode, State and Report Type stay saved until you change them.</div>
+</section>
+
+<section class="card">
+<h2>2. Daily working sequence</h2>
+<ol>
+<li><b>IMPORT</b> → import SALE first → RTO → RT → Process &amp; Save.</li>
+<li><b>VALIDATION</b> → resolve State mapping and HSN/GST/Item errors.</li>
+<li><b>GENERATE</b> → select Real Invoice Wise, State Wise or Order Wise.</li>
+<li><b>GENERATE TALLY</b> or <b>GENERATE BUSY</b>.</li>
+<li>Import Settlement / Unsettlement and run <b>RECONCILIATION</b>.</li>
+<li>Review P&amp;L, BI, TCS, Settlement Audit and GST Preview/JSON.</li>
+</ol>
+</section>
+
+<section class="card">
+<h2>3. What each report mode does</h2>
+<h3>Real Invoice Wise</h3>
+<p>Uses actual marketplace invoice/CN numbers and actual transaction dates. No custom invoice series is asked.</p>
+<h3>State Wise</h3>
+<p>Transactions for the selected month are grouped State-wise. A State uses the same generated invoice until the taxable invoice limit is reached; then the next invoice number is used. Tally/BUSY voucher date is the last date of that month. Reporting and analysis still use real dates.</p>
+<h3>Order Wise</h3>
+<p>Generated invoice series is applied Order-wise. RTO and RT are two reporting categories but accounting/GST/Tally/BUSY treats both as one RETURN stream.</p>
+<div class="ok"><b>HSN mode:</b> inside the same generated State/Order invoice, same HSN + GST rate is merged into one item line. Qty, Taxable, GST and TCS are totalled. Narration contains all underlying marketplace invoice/CN numbers.</div>
+</section>
+
+<section class="card">
+<h2>4. Validation errors and solutions</h2>
+<table>
+<tr><th>Error / Message</th><th>Meaning</th><th>What you should do</th></tr>
+<tr><td>STATE MAPPING REQUIRED</td><td>The State name in the marketplace report is not yet linked to your Tally/BUSY State.</td><td>Open Validation. Select the correct searchable Tally State and BUSY State, save mapping, then validate again.</td></tr>
+<tr><td>HSN MISSING - SALE LOOKUP REQUIRED</td><td>RTO/RT does not contain HSN and the software could not reliably find the matching SALE record.</td><td>Check Order ID, Packet ID and SKU. In the HSN review window accept the software suggestion or correct the HSN. Save mapping for future use.</td></tr>
+<tr><td>HSN / GST RATE MISMATCH</td><td>Report HSN/GST does not match the saved Item Master.</td><td>Review HSN, GST rate and SKU/order. Correct only if required, then save mapping. Every final transaction must have a valid Item Name.</td></tr>
+<tr><td>ITEM NAME BLANK / NOT FOUND</td><td>The software could not create or identify a valid accounting item.</td><td>Run Validation and resolve the shown HSN/SKU/GST combination. Do not generate the accounting report until Item Name is valid.</td></tr>
+<tr><td>DUPLICATE / ALREADY IMPORTED</td><td>The same source transaction/file record appears to have been imported before.</td><td>Do not import the same report twice unless you intentionally want to replace/regenerate it. Check month/file before proceeding.</td></tr>
+<tr><td>REPORT ALREADY GENERATED</td><td>The same month/report mode already exists.</td><td>Choose <b>YES</b> only when you want a fresh regeneration. Old generated rows are replaced and the original State/Order series is reused.</td></tr>
+<tr><td>NO GENERATED REPORT ROWS</td><td>Tally/BUSY export has no current generated report.</td><td>Run Validation → Generate first, then export.</td></tr>
+<tr><td>JOURNAL MAPPING REQUIRED</td><td>A required Tally/BUSY GST ledger or Journal setting is blank.</td><td>Open Client Settings → Tally Journal or BUSY Journal, fill the requested ledger/field and save.</td></tr>
+<tr><td>PDF HEAD / LEDGER NOT MAPPED</td><td>A PDF bill description has no saved accounting ledger/head.</td><td>Open PDF Expense view, select the correct expense head/Tally ledger/BUSY ledger and save mapping.</td></tr>
+<tr><td>NETWORK SERVER OFFLINE / UNREACHABLE</td><td>The client cannot reach the Queshift database server.</td><td>Confirm both PCs are on the same LAN/Wi-Fi, server PC is ON, then use Network Connection Check. If needed ask the office administrator to restart QueshiftDBServer.</td></tr>
+<tr><td>NETWORK KEY PERMISSION DENIED</td><td>The local Queshift security key cannot be read.</td><td>Use the approved Queshift Network Client setup/repair. Do not create or replace the key manually.</td></tr>
+<tr><td>TALLY EXPECTED TAX / MODIFIED TAX MISMATCH</td><td>Tally found a paise-level tax difference.</td><td>Use the latest Queshift version, regenerate that month and re-import the fresh Tally file. If the same voucher still appears, note the voucher number and contact support.</td></tr>
+</table>
+</section>
+
+<section class="card">
+<h2>5. Settlement and Reconciliation</h2>
+<div class="grid">
+<div class="box green">100% SETTLED<br><span class="small">Expected and received amount matched within tolerance.</span></div>
+<div class="box red">PENDING / UNSETTLED<br><span class="small">Not paid, partially paid, short paid, unsettled or missing settlement.</span></div>
+<div class="box orange">SUSPENSE / UNMATCHED<br><span class="small">Settlement exists but a reliable imported SALE/order match was not found.</span></div>
+</div>
+<p><b>Negative values are important.</b> A return/RTO/RT deduction stays negative. Example: Expected Payout <code>-673.86</code> means this amount is deducted from your payment; it must reduce total pending, not increase it.</p>
+<p>If marketplace Expected Payout is missing, Queshift calculates a transparent estimate using saved rules/history and shows the source/confidence.</p>
+</section>
+
+<section class="card">
+<h2>6. P&amp;L / BI / TCS / GST</h2>
+<p><b>P&amp;L:</b> Gross Sale, RT, RTO, Net Sale, Commission %, Shipping %, Fixed Fee %, Other Marketplace Fees, Expected/Received/Pending, TCS/TDS, Purchase Cost, Packaging, Advertising, Warehousing, PDF bill charges and Final True Profit/Loss.</p>
+<p><b>BI:</b> Top 10 SKU, Top 10 full State names, return %, graphs, reconciliation accuracy and suggestions.</p>
+<p><b>TCS:</b> State-wise and HSN-wise totals with Create Excel.</p>
+<p><b>GST Preview:</b> Summary, B2C State, B2B, CDNR, HSN, Documents → Create Excel / Create JSON.</p>
+</section>
+
+<section class="card">
+<h2>7. Tally Journal and BUSY Journal</h2>
+<p>Tally Journal and BUSY Journal are independent. Changing BUSY Journal settings does not change Tally Journal settings.</p>
+<p>Client Settings lets you save different IGST/CGST/SGST ledgers, Cash/Party A/C, Voucher Type, Sheet Name and Excel headers for Tally and BUSY.</p>
+<div class="note"><b>CASH TOTAL</b> is the full invoice amount including GST.</div>
+</section>
+
+<section class="card">
+<h2>8. Keyboard shortcuts</h2>
+<p>The shortcut letter is underlined on the dashboard button. Press <b>Ctrl + underlined letter</b> for the main actions.</p>
+<table>
+<tr><th>Action</th><th>Shortcut</th><th>Action</th><th>Shortcut</th></tr>
+<tr><td>Import</td><td>Ctrl+I</td><td>Generate</td><td>Ctrl+G</td></tr>
+<tr><td>Generate Tally</td><td>Ctrl+T</td><td>Generate BUSY</td><td>Ctrl+B</td></tr>
+<tr><td>Reconciliation</td><td>Ctrl+R</td><td>P&amp;L</td><td>Ctrl+P</td></tr>
+<tr><td>Journal Export</td><td>Ctrl+J</td><td>Export Report</td><td>Ctrl+E</td></tr>
+<tr><td>Help</td><td>F1</td><td></td><td></td></tr>
+</table>
+</section>
+
+<section class="card">
+<h2>9. Network connection check</h2>
+<p>If Myntra shows Network Offline/Unreachable:</p>
+<ol>
+<li>Check the server PC is ON.</li>
+<li>Check both systems are connected to the same office network.</li>
+<li>Open the Queshift Network connection tool/profile if provided by your office.</li>
+<li>Do not open or copy MYTDatabase.db manually.</li>
+</ol>
+</section>
+</div>
+
+<!-- ========================== HINGLISH ========================== -->
+<div class="lang" id="hinglish">
+<section class="card">
+<h2>1. Myntra kaise start hoga</h2>
+<p>Jab Myntra <b>Main Queshift</b> ke dashboard se open hoga, company Queshift me pehle hi select ho chuki hogi. Myntra same company me direct open hoga. Dobara company wala box nahi aayega.</p>
+<p>Agar developer/network test BAT direct run karoge to company selection box aa sakta hai. Wo sirf direct testing ke liye hai.</p>
+<div class="note"><b>Saved settings:</b> B2B/B2C, HSN/SKU, period, Tally/BUSY, State aur Report Type tab tak same rahenge jab tak client khud change na kare.</div>
+</section>
+
+<section class="card">
+<h2>2. Daily working ka correct sequence</h2>
+<ol>
+<li><b>IMPORT</b> → sabse pehle SALE → phir RTO → phir RT → Process &amp; Save.</li>
+<li><b>VALIDATION</b> → State mapping, HSN, GST Rate aur Item Name errors solve karo.</li>
+<li><b>GENERATE</b> → Real Invoice Wise / State Wise / Order Wise select karo.</li>
+<li><b>GENERATE TALLY</b> ya <b>GENERATE BUSY</b>.</li>
+<li>Settlement aur Unsettlement import karke <b>RECONCILIATION</b> run karo.</li>
+<li>P&amp;L, BI, TCS, Settlement Audit aur GST Preview/JSON check karo.</li>
+</ol>
+</section>
+
+<section class="card">
+<h2>3. Report modes ka matlab</h2>
+<h3>Real Invoice Wise</h3>
+<p>Marketplace ka actual invoice/CN number aur actual date use hoti hai. Custom invoice number nahi poocha jata.</p>
+<h3>State Wise</h3>
+<p>Selected month ka data State ke according group hota hai. Ek State ka same invoice tab tak chalta hai jab tak taxable invoice limit cross na ho; uske baad next invoice number lagta hai. Tally/BUSY date month ki last date hoti hai, lekin reporting me real date hi consider hoti hai.</p>
+<h3>Order Wise</h3>
+<p>Generated invoice series Order ke according use hoti hai. RTO aur RT reporting me alag dikh sakte hain, lekin GST/Tally/BUSY/accounting me dono RETURN ka part hain.</p>
+<div class="ok"><b>HSN mode:</b> same generated State/Order invoice me same HSN + same GST rate ki Qty, Taxable, GST aur TCS ek line me total hoti hai. Narration me sab actual marketplace invoice/CN numbers aate hain.</div>
+</section>
+
+<section class="card">
+<h2>4. Validation errors aur unka solution</h2>
+<table>
+<tr><th>Error</th><th>Iska matlab</th><th>Kya karna hai</th></tr>
+<tr><td>STATE MAPPING REQUIRED</td><td>Report ka State abhi Tally/BUSY State se map nahi hai.</td><td>Validation me correct Tally State aur BUSY State searchable dropdown se select karo, Save Mapping karo, phir Validation dobara run karo.</td></tr>
+<tr><td>HSN MISSING - SALE LOOKUP REQUIRED</td><td>RTO/RT me HSN nahi mila aur SALE se reliable match nahi bana.</td><td>Order ID, Packet ID aur SKU check karo. Software ka suggested HSN accept ya correct karo. Save Mapping karne par future me automatically use hoga.</td></tr>
+<tr><td>HSN / GST RATE MISMATCH</td><td>Report ka HSN/GST saved Item Master se match nahi kar raha.</td><td>HSN, GST Rate, SKU/Order ko review karo. Correct mapping save karo. Final report me Item Name blank nahi hona chahiye.</td></tr>
+<tr><td>ITEM NAME BLANK / NOT FOUND</td><td>Valid accounting item create/find nahi hua.</td><td>Validation error window me HSN/SKU/GST combination resolve karo. Jab tak Item Name valid na ho Generate mat karo.</td></tr>
+<tr><td>DUPLICATE / ALREADY IMPORTED</td><td>Same source transaction/report pehle import ho chuka lag raha hai.</td><td>Same file ko dobara import mat karo. Agar report replace karni hai to correct month/report confirm karke regenerate karo.</td></tr>
+<tr><td>REPORT ALREADY GENERATED</td><td>Same month/report pehle se bana hua hai.</td><td><b>YES</b> tab karo jab fresh regenerate karna ho. Old generated rows replace hongi, append duplicate nahi hoga aur original series reuse hogi.</td></tr>
+<tr><td>NO GENERATED REPORT ROWS</td><td>Tally/BUSY export ke liye report generate nahi hai.</td><td>Validation → Generate → phir Tally/BUSY.</td></tr>
+<tr><td>JOURNAL MAPPING REQUIRED</td><td>Tally/BUSY Journal ka required GST ledger ya setting blank hai.</td><td>Client Settings → Tally Journal ya BUSY Journal me requested field bhar ke Save karo.</td></tr>
+<tr><td>PDF HEAD / LEDGER NOT MAPPED</td><td>PDF bill description ka expense head/ledger save nahi hai.</td><td>PDF Expense view me correct head, Tally Ledger aur BUSY Ledger select karke Save Mapping karo.</td></tr>
+<tr><td>NETWORK SERVER OFFLINE / UNREACHABLE</td><td>Client Queshift DB Server tak nahi pahunch raha.</td><td>Server PC ON hai? Same LAN/Wi-Fi hai? Network Connection Check use karo. Zarurat par office admin se server restart karwao.</td></tr>
+<tr><td>NETWORK KEY PERMISSION DENIED</td><td>Queshift security key read nahi ho rahi.</td><td>Approved Network Client setup/repair use karo. Key ko manually replace/create mat karo.</td></tr>
+<tr><td>TALLY EXPECTED TAX / MODIFIED TAX MISMATCH</td><td>Tally ko paise level tax difference mila.</td><td>Latest Queshift me same month ko YES Regenerate karo aur fresh Tally file import karo. Same voucher fir bhi aaye to voucher no. note karke support ko do.</td></tr>
+</table>
+</section>
+
+<section class="card">
+<h2>5. Settlement / Unsettlement / Reconciliation</h2>
+<div class="grid">
+<div class="box green">100% SETTLED<br><span class="small">Expected aur Received tolerance ke andar match.</span></div>
+<div class="box red">PENDING / UNSETTLED<br><span class="small">Unpaid, short-paid, partially paid, unsettled ya missing settlement.</span></div>
+<div class="box orange">SUSPENSE / UNMATCHED<br><span class="small">Settlement mila lekin imported SALE/order se reliable match nahi mila.</span></div>
+</div>
+<p><b>Negative value ko positive mat samjho.</b> Return/RTO/RT deduction negative hi rahega. Example <code>-673.86</code> ka matlab payment se ₹673.86 cut hona hai; ye total Pending ko reduce karega.</p>
+<p>Agar marketplace Expected Payout missing ho to Queshift saved charge rules/history se transparent estimate banata hai aur source/confidence show karta hai.</p>
+</section>
+
+<section class="card">
+<h2>6. P&amp;L, BI, TCS aur GST</h2>
+<p><b>P&amp;L:</b> Gross Sale, RT, RTO, Net Sale, Commission %, Shipping %, Fixed Fee %, Other Marketplace Fees, Expected/Received/Pending, TCS/TDS, Purchase Cost, Packaging, Advertising, Warehousing, PDF Bill Charges aur Final True Profit/Loss.</p>
+<p><b>BI:</b> Top 10 SKU, Top 10 full State names, Return %, graphs, Reconciliation Accuracy aur suggestions.</p>
+<p><b>TCS:</b> State Wise + HSN Wise total with Create Excel.</p>
+<p><b>GST:</b> Summary, B2C State, B2B, CDNR, HSN, Documents → Create Excel / Create JSON.</p>
+</section>
+
+<section class="card">
+<h2>7. Tally Journal aur BUSY Journal</h2>
+<p>Dono ki mapping alag save hoti hai. BUSY Journal me change karne se Tally Journal change nahi hoga.</p>
+<p>Client Settings me IGST/CGST/SGST Ledger, Cash/Party A/C, Voucher Type, Sheet Name aur Excel headers alag-alag save kar sakte ho.</p>
+<div class="note"><b>CASH TOTAL</b> = full invoice total including GST.</div>
+</section>
+
+<section class="card">
+<h2>8. Shortcut</h2>
+<p>Dashboard button me shortcut letter <b>underline</b> hoga. Main shortcuts ke liye <b>Ctrl + underlined letter</b> press karo.</p>
+<table>
+<tr><th>Kaam</th><th>Shortcut</th><th>Kaam</th><th>Shortcut</th></tr>
+<tr><td>Import</td><td>Ctrl+I</td><td>Generate</td><td>Ctrl+G</td></tr>
+<tr><td>Tally</td><td>Ctrl+T</td><td>BUSY</td><td>Ctrl+B</td></tr>
+<tr><td>Reconciliation</td><td>Ctrl+R</td><td>P&amp;L</td><td>Ctrl+P</td></tr>
+<tr><td>Journal Export</td><td>Ctrl+J</td><td>Export Report</td><td>Ctrl+E</td></tr>
+<tr><td>Help</td><td>F1</td><td></td><td></td></tr>
+</table>
+</section>
+</div>
+
+<!-- ========================== HINDI ========================== -->
+<div class="lang" id="hindi">
+<section class="card">
+<h2>1. Myntra कैसे शुरू होगा</h2>
+<p>जब Myntra मुख्य Queshift Dashboard से खुलेगा, कंपनी Queshift में पहले ही चुनी जा चुकी होगी। Myntra उसी कंपनी में सीधे खुलेगा। दूसरी बार Company Selection बॉक्स नहीं आएगा।</p>
+<p>यदि Developer/Network Test BAT सीधे चलाया जाता है तो Company Selection बॉक्स आ सकता है। वह केवल परीक्षण के लिए है।</p>
+<div class="note"><b>सेटिंग सुरक्षित रहती है:</b> B2B/B2C, HSN/SKU, अवधि, Tally/BUSY, State और Report Type तब तक नहीं बदलते जब तक उपयोगकर्ता स्वयं न बदले।</div>
+</section>
+
+<section class="card">
+<h2>2. रोज़ का सही कार्य क्रम</h2>
+<ol>
+<li><b>IMPORT</b> → पहले SALE → फिर RTO → फिर RT → Process &amp; Save.</li>
+<li><b>VALIDATION</b> → State Mapping, HSN, GST Rate और Item Name की त्रुटियाँ ठीक करें।</li>
+<li><b>GENERATE</b> → Real Invoice Wise / State Wise / Order Wise चुनें।</li>
+<li><b>GENERATE TALLY</b> या <b>GENERATE BUSY</b>.</li>
+<li>Settlement और Unsettlement Import करके <b>RECONCILIATION</b> चलाएँ।</li>
+<li>P&amp;L, BI, TCS, Settlement Audit और GST Preview/JSON देखें।</li>
+</ol>
+</section>
+
+<section class="card">
+<h2>3. Report Mode का अर्थ</h2>
+<h3>Real Invoice Wise</h3>
+<p>Marketplace का वास्तविक Invoice/CN Number और वास्तविक Date उपयोग होती है। Custom Invoice Series नहीं पूछी जाती।</p>
+<h3>State Wise</h3>
+<p>चुने हुए महीने के Transaction State के अनुसार समूहित होते हैं। Taxable Invoice Limit तक एक ही State Invoice चलता है; Limit पार होने पर अगला Invoice Number लगता है। Tally/BUSY Voucher Date महीने की अंतिम तारीख होती है, लेकिन Reporting में वास्तविक तारीख उपयोग होती है।</p>
+<h3>Order Wise</h3>
+<p>Generated Invoice Series Order के अनुसार लगती है। RTO और RT Reporting में अलग दिख सकते हैं, लेकिन GST/Tally/BUSY/Accounting में दोनों RETURN का भाग हैं।</p>
+<div class="ok"><b>HSN Mode:</b> एक ही Generated State/Order Invoice में समान HSN + समान GST Rate की Qty, Taxable, GST और TCS एक पंक्ति में Total होती है। Narration में सभी वास्तविक Marketplace Invoice/CN Number आते हैं।</div>
+</section>
+
+<section class="card">
+<h2>4. Validation Error और समाधान</h2>
+<table>
+<tr><th>त्रुटि</th><th>अर्थ</th><th>समाधान</th></tr>
+<tr><td>STATE MAPPING REQUIRED</td><td>Report का State अभी Tally/BUSY State से जुड़ा नहीं है।</td><td>Validation में सही Tally State और BUSY State चुनकर Save Mapping करें, फिर Validation दोबारा चलाएँ।</td></tr>
+<tr><td>HSN MISSING - SALE LOOKUP REQUIRED</td><td>RTO/RT में HSN नहीं मिला और SALE से भरोसेमंद Match नहीं बना।</td><td>Order ID, Packet ID और SKU जाँचें। Software का सुझाया HSN स्वीकार या सही करें और Mapping Save करें।</td></tr>
+<tr><td>HSN / GST RATE MISMATCH</td><td>Report का HSN/GST Saved Item Master से मेल नहीं खा रहा।</td><td>HSN, GST Rate, SKU/Order जाँचकर सही Mapping Save करें। Final Report में Item Name खाली नहीं होना चाहिए।</td></tr>
+<tr><td>ITEM NAME BLANK / NOT FOUND</td><td>Valid Accounting Item नहीं मिला/बना।</td><td>Validation में HSN/SKU/GST Combination ठीक करें। Item Name सही होने से पहले Generate न करें।</td></tr>
+<tr><td>DUPLICATE / ALREADY IMPORTED</td><td>वही Source Transaction/Report पहले Import हो चुका है।</td><td>एक ही File दोबारा Import न करें। Replace करना हो तो सही Month/Report चुनकर Regenerate करें।</td></tr>
+<tr><td>REPORT ALREADY GENERATED</td><td>उसी महीने की Report पहले से बनी हुई है।</td><td>Fresh Report चाहिए तो <b>YES</b> चुनें। पुरानी Generated Rows Replace होंगी, Duplicate Append नहीं होगा।</td></tr>
+<tr><td>NO GENERATED REPORT ROWS</td><td>Tally/BUSY Export के लिए Generated Report नहीं है।</td><td>Validation → Generate → फिर Tally/BUSY.</td></tr>
+<tr><td>JOURNAL MAPPING REQUIRED</td><td>Required GST Ledger या Journal Setting खाली है।</td><td>Client Settings → Tally Journal या BUSY Journal में मांगी गई Setting भरकर Save करें।</td></tr>
+<tr><td>PDF HEAD / LEDGER NOT MAPPED</td><td>PDF Bill Description का Expense Head/Ledger Save नहीं है।</td><td>PDF Expense View में सही Head, Tally Ledger और BUSY Ledger चुनकर Save Mapping करें।</td></tr>
+<tr><td>NETWORK SERVER OFFLINE / UNREACHABLE</td><td>Client Queshift DB Server तक नहीं पहुँच पा रहा।</td><td>Server PC चालू रखें, दोनों PC एक ही LAN/Wi-Fi पर हों, फिर Network Connection Check करें।</td></tr>
+<tr><td>NETWORK KEY PERMISSION DENIED</td><td>Queshift Security Key पढ़ी नहीं जा रही।</td><td>Approved Network Client Setup/Repair उपयोग करें। Key को Manual Replace/Create न करें।</td></tr>
+<tr><td>TALLY EXPECTED TAX / MODIFIED TAX MISMATCH</td><td>Tally को Tax में Paise-Level अंतर मिला।</td><td>Latest Queshift में उसी Month को YES Regenerate करें और नई Tally File Import करें। वही Voucher फिर आए तो Voucher Number Support को दें।</td></tr>
+</table>
+</section>
+
+<section class="card">
+<h2>5. Settlement और Reconciliation</h2>
+<div class="grid">
+<div class="box green">100% SETTLED<br><span class="small">Expected और Received राशि निर्धारित Tolerance में Match है।</span></div>
+<div class="box red">PENDING / UNSETTLED<br><span class="small">Unpaid, Short Paid, Partially Paid, Unsettled या Missing Settlement.</span></div>
+<div class="box orange">SUSPENSE / UNMATCHED<br><span class="small">Settlement मिला लेकिन Imported SALE/Order से विश्वसनीय Match नहीं मिला।</span></div>
+</div>
+<p><b>Negative Value महत्वपूर्ण है।</b> Return/RTO/RT Deduction Negative ही रहेगा। उदाहरण <code>-673.86</code> का अर्थ Payment से ₹673.86 कटना है; यह कुल Pending को कम करेगा।</p>
+</section>
+
+<section class="card">
+<h2>6. P&amp;L, BI, TCS और GST</h2>
+<p><b>P&amp;L:</b> Gross Sale, RT, RTO, Net Sale, Commission %, Shipping %, Fixed Fee %, Other Marketplace Fees, Expected/Received/Pending, TCS/TDS, Purchase Cost, Packaging, Advertising, Warehousing, PDF Bill Charges और Final True Profit/Loss.</p>
+<p><b>BI:</b> Top 10 SKU, Top 10 पूरे State Names, Return %, Graph, Reconciliation Accuracy और Suggestions.</p>
+<p><b>TCS:</b> State Wise और HSN Wise Total with Create Excel.</p>
+<p><b>GST:</b> Summary, B2C State, B2B, CDNR, HSN, Documents → Create Excel / Create JSON.</p>
+</section>
+
+<section class="card">
+<h2>7. Tally Journal और BUSY Journal</h2>
+<p>दोनों की Mapping अलग-अलग Save होती है। BUSY Journal बदलने से Tally Journal नहीं बदलेगा।</p>
+<p>Client Settings में IGST/CGST/SGST Ledger, Cash/Party A/C, Voucher Type, Sheet Name और Excel Headers अलग-अलग Save किए जा सकते हैं।</p>
+<div class="note"><b>CASH TOTAL</b> = GST सहित पूरी Invoice Amount.</div>
+</section>
+
+<section class="card">
+<h2>8. Shortcut</h2>
+<p>Dashboard Button में Shortcut Letter <b>Underline</b> रहेगा। मुख्य कार्यों के लिए <b>Ctrl + Underlined Letter</b> दबाएँ।</p>
+<table>
+<tr><th>कार्य</th><th>Shortcut</th><th>कार्य</th><th>Shortcut</th></tr>
+<tr><td>Import</td><td>Ctrl+I</td><td>Generate</td><td>Ctrl+G</td></tr>
+<tr><td>Tally</td><td>Ctrl+T</td><td>BUSY</td><td>Ctrl+B</td></tr>
+<tr><td>Reconciliation</td><td>Ctrl+R</td><td>P&amp;L</td><td>Ctrl+P</td></tr>
+<tr><td>Journal Export</td><td>Ctrl+J</td><td>Export Report</td><td>Ctrl+E</td></tr>
+<tr><td>Help</td><td>F1</td><td></td><td></td></tr>
+</table>
+</section>
+</div>
+</div>
+<footer>Queshift Myntra Client Help • F1</footer>
+<script src="assets/js/config.js"></script><script src="assets/js/api.js"></script><script src="assets/js/ai-widget.js"></script>
+</body>
+</html>

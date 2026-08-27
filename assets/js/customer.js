@@ -27,6 +27,6 @@
     try { await QSApi.post("saveProfile", Object.fromEntries(new FormData(form)), QSApi.token()); note("Profile saved successfully."); load(); }
     catch (error) { note(error.message, true); }
   });
-  document.querySelector("[data-user-logout]").onclick = async () => { await QSApi.logout(); location.href = "login.html"; };
+  document.querySelector("[data-user-logout]").onclick = () => { QSApi.clearSession(); location.href = "login.html"; };
   load();
 })();

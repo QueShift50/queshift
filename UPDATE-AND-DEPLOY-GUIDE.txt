@@ -1,0 +1,145 @@
+QUESHiFT WEBSITE V3 — UPDATE AND DEPLOY GUIDE
+============================================================
+
+IMPORTANT
+--------
+This package updates the old website. Existing Home, About, Login,
+Pricing, Payment, Blogs, Reviews, Admin, Customer Dashboard and Invoice
+features remain included.
+
+New features:
+1. Existing enquiry form → Google Sheet + ticket ID + colourful emails.
+2. Admin Client Queries → manual email response.
+3. Help Centre + Help Manager + Myntra 3-language guide.
+4. Queshift AI floating help icon on website pages.
+5. Protected Trial Download → email OTP + one email/phone only once.
+6. Admin Trial Download settings for a later Google Drive/MEGA link.
+
+
+PART A — UPDATE THE EXISTING GOOGLE APPS SCRIPT
+============================================================
+
+STEP 1
+1. Open the existing "Queshift Website Database" Google Sheet.
+2. Open Extensions → Apps Script.
+3. Open the existing Code.gs. Do NOT create another Apps Script project.
+
+STEP 2
+1. Select all old Code.gs code and replace it with:
+   google-backend/Code.gs
+2. Click Save.
+3. From the function list select initQueshiftSystem and click Run.
+
+Running initQueshiftSystem again is safe. It keeps old records and creates
+only the missing new tabs:
+
+HELP_ARTICLES
+QUERIES
+QUERY_REPLIES
+OTP_LOG
+TRIAL_DOWNLOADS
+AI_CHAT_LOG
+
+Allow permissions if Google asks again.
+
+STEP 3 — UPDATE THE SAME WEB APP DEPLOYMENT
+1. Click Deploy → Manage deployments.
+2. Open the existing Web App deployment with the pencil/Edit icon.
+3. Version: New version → Deploy.
+
+Keep these settings:
+Execute as: Me
+Who has access: Anyone
+
+Do not create a second Apps Script project. Editing the existing deployment
+keeps the same Web App URL. Copy that URL after deployment.
+
+
+PART B — CONNECT THE WEBSITE PACKAGE
+============================================================
+
+STEP 1
+The website package is already connected to this Apps Script Web App URL:
+
+https://script.google.com/macros/s/AKfycbyOTDyjMh1tz3Lho6wnWprB_DdZtf9MC-ONyux3n-ezh8M1OLHbj5tXuonkzNVwckrCXQ/exec
+
+No config.js URL edit is required for this build.
+
+The Google Client ID is already entered:
+563010843241-bbpaask2tgp6gds6616kj9qp4i67qtia.apps.googleusercontent.com
+
+STEP 2
+1. Save config.js.
+2. Do not change CNAME, .nojekyll, robots.txt or existing images/videos.
+3. Keep the complete folder structure while uploading.
+
+
+PART C — UPLOAD TO THE EXISTING GITHUB WEBSITE
+============================================================
+
+STEP 1
+1. Open the existing Queshift GitHub repository.
+2. Click Add file → Upload files.
+3. Upload all files and folders from inside this extracted package.
+
+Upload the contents, not the outer package folder.
+When GitHub asks about same filenames, allow replacement.
+
+STEP 2
+1. Write commit message:
+   Queshift help AI query and trial download update
+2. Click Commit changes.
+3. Open Actions and wait until Pages deployment shows a green check.
+
+STEP 3
+1. Open https://queshift.in and press Ctrl+F5.
+2. Open Help and confirm the Myntra guide.
+3. Open Contact and submit a test enquiry using your own email.
+
+
+PART D — ADMIN SETTINGS AFTER DEPLOYMENT
+============================================================
+
+STEP 1
+1. Open https://queshift.in/admin.html
+2. Sign in with info.queshift@gmail.com.
+3. Open Client Queries and check the test ticket.
+
+STEP 2
+1. Type a response in the query card.
+2. Click Send Email Response.
+3. Confirm the colourful response email reached the client.
+
+STEP 3 — ADD TRIAL SOFTWARE LATER
+1. Admin → Brand & Social → Trial Download Settings.
+2. Paste the Google Drive or MEGA HTTPS download URL.
+3. Set Software Version, Trial Days, System Requirement and instructions.
+4. Click Save Trial Settings.
+
+Until a valid Trial Download URL is saved, the public page shows
+"Trial Download: Coming Soon". OTP registration remains open so the verified
+email/phone is saved. When the URL is added later, that same email OR phone
+can return once and receive the one-time trial download.
+
+
+FINAL TEST CHECKLIST
+============================================================
+
+[ ] Old homepage, video, pricing, blogs and login still open.
+[ ] Contact form requires name, email, 10-digit phone and message.
+[ ] Enquiry is saved in ENQUIRIES and both emails are received.
+[ ] Admin can manually reply to the client.
+[ ] Help page and Myntra 3-language guide open.
+[ ] Queshift AI icon and notification appear.
+[ ] AI answer links to Help; unresolved question opens Contact form.
+[ ] Trial form sends email OTP even while the download is Coming Soon.
+[ ] A Coming Soon registration can return once after the download becomes READY.
+[ ] After a trial download is granted, the same email OR phone is blocked from another free trial.
+
+SECURITY NOTE
+============================================================
+
+OTP_LOG stores an OTP hash, expiry, attempts and verification status—not
+the readable OTP. The website never places the private trial URL in HTML.
+After the storage provider starts the final download, file redistribution
+must also be controlled by the Queshift machine-based 15-day activation.

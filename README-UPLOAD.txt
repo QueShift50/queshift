@@ -1,11 +1,11 @@
-Queshift V4 GitHub + Google Upload Pack
+Queshift V2 GitHub Upload Pack
 ==============================
 
 This package includes the responsive public website, secure Google customer
 login, separate Google-authorised admin panel, pricing/payment workflow, blogs,
 reviews, Google Sheets database and private Google Drive download workflow.
 
-Start with V4-FIX-DEPLOY-STEPS.txt for this update. SETUP-GUIDE.txt remains the full setup reference.
+Start with SETUP-GUIDE.txt. Complete only one 2–3 step group at a time.
 
 Website: https://queshift.in
 Admin: https://queshift.in/admin.html

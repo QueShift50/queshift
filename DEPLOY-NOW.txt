@@ -1,0 +1,22 @@
+QUESHIFT WEBSITE - READY TO DEPLOY
+
+Backend URL already connected:
+https://script.google.com/macros/s/AKfycbyOTDyjMh1tz3Lho6wnWprB_DdZtf9MC-ONyux3n-ezh8M1OLHbj5tXuonkzNVwckrCXQ/exec
+
+Updated in this build:
+- Trial Download Coming Soon status on downloads.html
+- Registration remains open even when download link is blank
+- Name / Firm / Email / Phone / State / PIN form
+- Email OTP verification
+- Coming Soon verification saved in Google Sheet
+- Same Email OR Phone can return once when download becomes READY
+- One-time trial download after link becomes available
+- Admin Trial Settings aligned with the current Code.gs
+- Admin Enquiries / Trial Registrations aligned with current backend fields
+- google-backend/Code.gs backup updated to the latest deployed version
+
+GITHUB PAGES UPDATE:
+Upload/replace the complete contents of this package in the existing website repository root.
+Keep CNAME and .nojekyll exactly as included.
+
+No Apps Script redeploy is needed again unless Code.gs is changed later.
