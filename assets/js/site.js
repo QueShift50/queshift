@@ -248,15 +248,45 @@
 
   function renderReviewShowcase(reviews) {
     document.querySelectorAll("[data-review-showcase]").forEach(wrap => {
-      const approved = (reviews || []).filter(r => !r.status || String(r.status).toUpperCase() === "APPROVED").slice(0, 20);
+      if (wrap._qsReviewTimer) { clearInterval(wrap._qsReviewTimer); wrap._qsReviewTimer = null; }
+      const approved = (reviews || []).filter(r => !r.status || String(r.status).toUpperCase() === "APPROVED").slice(0, 30);
       if (!approved.length) {
         wrap.innerHTML = '<div class="review-empty"><b>Verified customer reviews will appear here after approval.</b><span>Share your experience below to help other e-commerce sellers.</span></div>';
         return;
       }
-      wrap.innerHTML = approved.map(r => {
+
+      const groups = [];
+      for (let i = 0; i < approved.length; i += 3) groups.push(approved.slice(i, i + 3));
+      const card = r => {
         const rating = Math.max(1, Math.min(5, Number(r.rating) || 5));
         return `<article class="review-card"><div class="review-stars">${'★'.repeat(rating)}${'☆'.repeat(5-rating)}</div><p>${esc(r.comment || '')}</p><footer><b>${esc(r.name || 'Queshift Customer')}</b>${r.reply ? `<small>Queshift reply: ${esc(r.reply)}</small>` : ''}</footer></article>`;
-      }).join('');
+      };
+      wrap.innerHTML = `<div class="review-slider" aria-label="Queshift customer reviews">
+        <div class="review-track">${groups.map((group, i) => `<div class="review-slide${i === 0 ? ' active' : ''}" data-review-slide="${i}">${group.map(card).join('')}</div>`).join('')}</div>
+        ${groups.length > 1 ? `<div class="review-controls"><button class="review-arrow" type="button" data-review-prev aria-label="Previous reviews">‹</button><div class="review-dots">${groups.map((_, i) => `<button type="button" class="review-dot${i === 0 ? ' active' : ''}" data-review-dot="${i}" aria-label="Show review group ${i + 1}"></button>`).join('')}</div><button class="review-arrow" type="button" data-review-next aria-label="Next reviews">›</button></div>` : ''}
+      </div>`;
+
+      if (groups.length < 2) return;
+      const slides = Array.from(wrap.querySelectorAll('[data-review-slide]'));
+      const dots = Array.from(wrap.querySelectorAll('[data-review-dot]'));
+      let index = 0;
+      const show = next => {
+        index = (next + slides.length) % slides.length;
+        slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+        dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+      };
+      const stop = () => { if (wrap._qsReviewTimer) { clearInterval(wrap._qsReviewTimer); wrap._qsReviewTimer = null; } };
+      const start = () => { stop(); if (!document.hidden) wrap._qsReviewTimer = setInterval(() => show(index + 1), 5500); };
+      const prev = wrap.querySelector('[data-review-prev]'), next = wrap.querySelector('[data-review-next]');
+      if (prev) prev.onclick = () => { show(index - 1); start(); };
+      if (next) next.onclick = () => { show(index + 1); start(); };
+      dots.forEach(dot => dot.onclick = () => { show(Number(dot.dataset.reviewDot) || 0); start(); });
+      wrap.addEventListener('mouseenter', stop);
+      wrap.addEventListener('mouseleave', start);
+      wrap.addEventListener('focusin', stop);
+      wrap.addEventListener('focusout', start);
+      document.addEventListener('visibilitychange', () => document.hidden ? stop() : start(), { passive: true });
+      start();
     });
   }
 

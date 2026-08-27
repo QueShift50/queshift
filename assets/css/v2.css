@@ -53,8 +53,26 @@ main + .announcement{margin-top:80px}.announcement + .footer{margin-top:0}
 .admin-query-list,.admin-help-list,.admin-trial-list{display:grid;gap:11px}.admin-query-row,.admin-help-row,.admin-trial-row{padding:14px;border:1px solid var(--line);border-radius:13px;background:#fff}.admin-query-row header,.admin-help-row header{display:flex;gap:10px;align-items:center;justify-content:space-between}.admin-query-row p,.admin-help-row p{margin:8px 0;color:#55687f;font-size:11px;line-height:1.6}.admin-query-row small,.admin-help-row small,.admin-trial-row small{color:#7b8ca2}.admin-row-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.admin-row-actions button,.admin-row-actions a{padding:7px 10px;border:1px solid #c5d4e5;border-radius:8px;background:#fff;color:#075bb8;font-size:9px;font-weight:850;cursor:pointer}.admin-row-actions .danger{color:#b42318}.admin-row-actions .success{color:#08774f}
 @media(max-width:900px){.trial-card{grid-template-columns:1fr}.help-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.help-grid{grid-template-columns:1fr}.help-search{flex-direction:column}.qs-ai{right:15px;bottom:82px}.trial-modal-box{padding:22px 15px}.trial-card{padding:20px}}
 
-/* V7 performance-safe public customer review showcase */
-.review-showcase{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:26px}
-.review-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 8px 28px rgba(7,40,84,.07)}
-.review-stars{font-size:18px;letter-spacing:2px;color:#f5a623;margin-bottom:10px}.review-card p{color:var(--muted);line-height:1.7;margin:0 0 14px}.review-card footer{display:flex;flex-direction:column;gap:6px}.review-card footer b{color:var(--ink)}.review-card footer small{color:#4e6888;line-height:1.5}.review-empty{grid-column:1/-1;text-align:center;padding:28px;border:1px dashed var(--line);border-radius:18px;background:#fff}.review-empty span{display:block;color:var(--muted);margin-top:6px}
-@media(max-width:900px){.review-showcase{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.review-showcase{grid-template-columns:1fr}}
+/* V8 compact 3-at-a-time customer review carousel */
+.review-showcase{margin-top:26px}
+.review-slider{position:relative;overflow:hidden}
+.review-track{position:relative;min-height:245px}
+.review-slide{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;animation:qsReviewIn .42s ease}
+.review-slide.active{display:grid}
+.review-card{min-width:0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 8px 28px rgba(7,40,84,.07)}
+.review-stars{font-size:18px;letter-spacing:2px;color:#f5a623;margin-bottom:10px}
+.review-card p{color:var(--muted);line-height:1.7;margin:0 0 14px}
+.review-card footer{display:flex;flex-direction:column;gap:6px}
+.review-card footer b{color:var(--ink)}
+.review-card footer small{color:#4e6888;line-height:1.5}
+.review-controls{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:18px}
+.review-arrow{width:36px;height:36px;border:1px solid #c9d7e8;border-radius:50%;background:#fff;color:#075bb8;font-size:25px;line-height:1;cursor:pointer;box-shadow:0 5px 16px rgba(7,40,84,.06)}
+.review-arrow:hover{background:#075bb8;color:#fff;border-color:#075bb8}
+.review-dots{display:flex;align-items:center;justify-content:center;gap:7px}
+.review-dot{width:8px;height:8px;padding:0;border:0;border-radius:999px;background:#c3d2e5;cursor:pointer;transition:.2s}
+.review-dot.active{width:22px;background:#075bb8}
+.review-empty{text-align:center;padding:28px;border:1px dashed var(--line);border-radius:18px;background:#fff}
+.review-empty span{display:block;color:var(--muted);margin-top:6px}
+@keyframes qsReviewIn{from{opacity:.25;transform:translateX(18px)}to{opacity:1;transform:none}}
+@media(max-width:900px){.review-slide{grid-template-columns:repeat(2,minmax(0,1fr))}.review-slide .review-card:nth-child(3){grid-column:1/-1}.review-track{min-height:395px}}
+@media(max-width:620px){.review-slide{grid-template-columns:1fr}.review-slide .review-card:nth-child(3){grid-column:auto}.review-track{min-height:0}.review-card{padding:17px}}
