@@ -1,0 +1,41 @@
+QUESHIFT FINAL WEBSITE UPDATE - 27 AUG 2026
+
+MASTER BASE: queshift-main.zip (existing design preserved)
+Apps Script URL wired in website:
+https://script.google.com/macros/s/AKfycbyOTDyjMh1tz3Lho6wnWprB_DdZtf9MC-ONyux3n-ezh8M1OLHbj5tXuonkzNVwckrCXQ/exec
+
+INCLUDED:
+- Existing logo, owners, owner zoom, WhatsApp, counters, banners and 20% FIRST20 pricing preserved
+- Google Sheet BLOGS restored
+- Client Query -> ENQUIRIES sheet + acknowledgement email
+- Admin Client Queries -> manual Reply / Close / Reopen
+- Public Help Centre + admin Help Guide Publisher
+- Queshift AI help icon on public pages, searches published Help + built-in Myntra guide
+- Myntra public SEO help guide
+- Free Trial Registration + Email OTP + Coming Soon/Ready logic
+- Trial Requests & Trial Settings in Admin
+- Sitemap includes Help and Myntra Help
+
+IMPORTANT BACKEND STEP:
+1. In the SAME Apps Script project, replace Code.gs with google-backend/Code.gs from this package.
+2. Save.
+3. Run initQueshiftSystem ONCE. This adds HELP_ARTICLES if missing and does not delete existing BLOGS.
+4. Deploy > Manage deployments > existing Web App > Edit > New version > Deploy. Keep same Web App URL.
+
+WEBSITE STEP:
+5. Upload all website files/folders in this package to the existing GitHub repository root.
+6. Keep CNAME and .nojekyll.
+7. Wait for GitHub Pages green deployment.
+8. Open https://queshift.in and Ctrl+F5.
+
+TESTS:
+- Apps Script ?action=blogHealth -> should show 3 published blogs
+- Apps Script ?action=helpHealth -> should return help sheet status
+- https://queshift.in/blogs.html -> Sheet blogs
+- https://queshift.in/help.html -> Help Centre
+- https://queshift.in/myntra-help.html -> public Myntra guide
+- https://queshift.in/downloads.html -> 20% offer + Free Trial section
+- https://queshift.in/contact.html -> email + phone mandatory query
+
+NOTE ON DOWNLOAD LINK SECURITY:
+The website blocks second free-trial entitlement by email/phone. For stronger link protection, keep a Google Drive trial file set to Restricted and use TRIAL_SOFTWARE_FILE_ID; after OTP verification the verified email is granted viewer access. A permanently public Mega/Drive URL can still be copied because that external service controls the URL.

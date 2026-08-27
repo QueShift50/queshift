@@ -20,7 +20,11 @@
     const slug = new URLSearchParams(location.search).get("slug") || "";
     if (!slug || !QSApi.isConfigured()) { title.textContent = "Help guide unavailable"; document.querySelector("[data-help-body]").innerHTML = '<p>Please return to the Help Centre or contact Queshift support.</p>'; return; }
     QSApi.get("helpArticle", { slug }).then(data => {
-      document.title = `${data.title} | Queshift Help`;
+      document.title = data.metaTitle || `${data.title} | Queshift Help`;
+      let md=document.querySelector('meta[name="description"]'); if(md) md.content=data.metaDescription||data.summary||'';
+      let mk=document.querySelector('meta[name="keywords"]'); if(!mk){mk=document.createElement('meta');mk.name='keywords';document.head.appendChild(mk);} mk.content=data.keywords||'';
+      let canonical=document.querySelector('link[rel="canonical"]'); if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.appendChild(canonical);} canonical.href=`https://queshift.in/help-detail.html?slug=${encodeURIComponent(data.slug||slug)}`;
+      const schema={"@context":"https://schema.org","@type":"TechArticle",headline:data.title,description:data.metaDescription||data.summary||'',datePublished:data.isoDate,author:{"@type":"Organization",name:"Queshift by AW Taxation"},publisher:{"@type":"Organization",name:"Queshift",url:"https://queshift.in"}};const sc=document.createElement('script');sc.type='application/ld+json';sc.textContent=JSON.stringify(schema);document.head.appendChild(sc);
       title.textContent = data.title;
       document.querySelector("[data-help-category]").textContent = data.category || "Help Guide";
       document.querySelector("[data-help-summary]").textContent = data.summary || "";

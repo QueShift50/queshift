@@ -184,7 +184,8 @@
 
   function renderPartners(partners) {
     document.querySelectorAll("[data-partners]").forEach(wrap => {
-      wrap.innerHTML = partners.map(p => {
+      const ordered = partners.slice().sort((a,b) => { const an=String(a&&a.name||"").toLowerCase(), bn=String(b&&b.name||"").toLowerCase(); const ar=an==="ajay kumar"?1:an==="wasim raza"?2:99, br=bn==="ajay kumar"?1:bn==="wasim raza"?2:99; return ar-br; });
+      wrap.innerHTML = ordered.map(p => {
         const fallback = ownerFallback(p.name);
         const photo = mediaImg(p.imageUrl || fallback, p.name, "owner-photo real", fallback);
         return `<article class="owner">${photo}<div><h3>${esc(p.name)}</h3><b>${esc(p.role || "Co-Owner, Queshift")}</b><p>${esc(p.bio || "Building practical e-commerce accounting and reconciliation solutions for growing sellers.")}</p></div></article>`;
@@ -276,7 +277,7 @@
       event.preventDefault(); const status = contact.querySelector("[data-form-status]"); if (status) status.textContent = "Sending…";
       const payload = Object.fromEntries(new FormData(contact));
       try { await QSApi.post("contact", payload); contact.reset(); if (status) status.textContent = "Thank you. Our team will contact you shortly."; }
-      catch (_) { location.href = `mailto:${defaults.email}?subject=${encodeURIComponent("Queshift Website Enquiry")}&body=${encodeURIComponent(JSON.stringify(payload, null, 2))}`; if (status) status.textContent = "Opening your email application…"; }
+      catch (error) { if (status) { status.textContent = error.message || "Query could not be submitted. Please try again."; status.classList.add("error"); } }
     });
   });
 })();

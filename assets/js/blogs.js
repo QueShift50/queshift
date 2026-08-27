@@ -4,8 +4,10 @@
   const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   async function list() {
     const grid = document.querySelector("[data-blog-list]"); if (!grid) return;
-    let blogs = fallback; try { if (QSApi.isConfigured()) blogs = await QSApi.get("blogs"); } catch (_) {}
-    grid.innerHTML = (blogs.length ? blogs : fallback).map(b => `<article class="blog-card"><img src="${esc(QSApi.mediaUrl(b.imageUrl,"assets/images/aw-taxation-banner.jpg"))}" alt="${esc(b.title)}"><div><div class="blog-meta"><span>${esc(b.date||"")}</span><span>${esc(b.tags||"")}</span></div><h2>${esc(b.title)}</h2><p>${esc(b.summary||"")}</p><a class="btn btn-outline btn-sm" href="blog.html?slug=${encodeURIComponent(b.slug)}">Read Article →</a></div></article>`).join("");
+    let blogs = fallback;
+    try { if (QSApi.isConfigured()) blogs = await QSApi.get("blogs"); }
+    catch (error) { if (QSApi.isConfigured()) { grid.innerHTML = `<p class="empty-state">Blogs could not be loaded: ${esc(error.message)}</p>`; return; } }
+    grid.innerHTML = (blogs.length ? blogs : (QSApi.isConfigured()?[]:fallback)).map(b => `<article class="blog-card"><img src="${esc(QSApi.mediaUrl(b.imageUrl,"assets/images/aw-taxation-banner.jpg"))}" alt="${esc(b.title)}"><div><div class="blog-meta"><span>${esc(b.date||"")}</span><span>${esc(b.tags||"")}</span></div><h2>${esc(b.title)}</h2><p>${esc(b.summary||"")}</p><a class="btn btn-outline btn-sm" href="blog.html?slug=${encodeURIComponent(b.slug)}">Read Article →</a></div></article>`).join("");
   }
   async function detail() {
     const body = document.querySelector("[data-blog-body]"); if (!body) return; const slug = new URLSearchParams(location.search).get("slug");
