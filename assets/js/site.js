@@ -94,35 +94,60 @@
   }
   function applyFavicon(value) {
     const fallback = "favicon-32x32.png";
+    const source = String(value || fallback).trim() || fallback;
+    const current = document.querySelector('link[data-qs-dynamic-favicon]');
+    if (current && current.dataset.qsSource === source) return;
     const candidates = window.QSApi && QSApi.mediaCandidates ? QSApi.mediaCandidates(value, fallback) : [mediaUrl(value, fallback)];
     const tryAt = index => {
       if (index >= candidates.length) return;
+      const candidate = candidates[index];
       const test = new Image();
       test.onload = () => {
-        const fresh = candidates[index] + (candidates[index].includes("?") ? "&" : "?") + "qsfv=" + Date.now();
-        document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach(link => { link.href = fresh; });
+        document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach(link => { link.href = candidate; });
         let dynamic = document.querySelector('link[data-qs-dynamic-favicon]');
         if (!dynamic) {
-          dynamic = document.createElement("link"); dynamic.rel = "icon"; dynamic.setAttribute("data-qs-dynamic-favicon", "1"); document.head.appendChild(dynamic);
+          dynamic = document.createElement("link");
+          dynamic.rel = "icon";
+          dynamic.setAttribute("data-qs-dynamic-favicon", "1");
+          document.head.appendChild(dynamic);
         }
-        dynamic.href = fresh;
+        dynamic.dataset.qsSource = source;
+        dynamic.href = candidate;
       };
       test.onerror = () => tryAt(index + 1);
-      test.src = candidates[index];
+      test.src = candidate;
     };
     tryAt(0);
   }
+
   function loadPublic() {
-    // Paint defaults/cached content immediately so the page never waits on Google Apps Script.
+    // Fast stale-while-revalidate: paint cached/default content immediately.
     let data = merge();
     apply(data);
-    if (window.QSApi && QSApi.isConfigured()) {
+    if (!(window.QSApi && QSApi.isConfigured())) return;
+
+    const cached = getLocal();
+    const cachedAt = Number(localStorage.getItem("qs_public_cache_at") || 0);
+    const freshFor = 5 * 60 * 1000;
+    if (cached && cachedAt && (Date.now() - cachedAt) < freshFor) return;
+
+    const refresh = () => {
       QSApi.get("publicData").then(remote => {
-        data = merge(remote);
-        try { localStorage.setItem("qs_public_cache", JSON.stringify(remote)); } catch (_) {}
-        apply(data);
-      }).catch(() => { /* cached/default content already painted */ });
-    }
+        if (!remote) return;
+        const previous = getLocal();
+        try {
+          localStorage.setItem("qs_public_cache", JSON.stringify(remote));
+          localStorage.setItem("qs_public_cache_at", String(Date.now()));
+        } catch (_) {}
+        // Avoid repainting/rebinding every Drive image when data has not changed.
+        let changed = true;
+        try { changed = JSON.stringify(previous || {}) !== JSON.stringify(remote || {}); } catch (_) {}
+        if (changed || !previous) apply(merge(remote));
+      }).catch(() => { /* cached/default content is already visible */ });
+    };
+
+    if ("requestIdleCallback" in window) requestIdleCallback(refresh, { timeout: 900 });
+    else setTimeout(refresh, 250);
   }
 
   function apply(data) {
@@ -238,10 +263,25 @@
   function youtubeId(url) { try { const u = new URL(url); return u.hostname.includes("youtu.be") ? u.pathname.slice(1) : u.searchParams.get("v") || u.pathname.split("/").filter(Boolean).pop(); } catch (_) { return ""; } }
   function renderVideo(video) {
     const section = document.querySelector("[data-video-section]"); if (!section) return;
-    if (!video || !video.url) { section.hidden = true; return; }
+    if (section._qsVideoObserver) { section._qsVideoObserver.disconnect(); section._qsVideoObserver = null; }
+    const frame = section.querySelector("[data-youtube-frame]");
+    if (!video || !video.url) { section.hidden = true; if (frame) frame.removeAttribute("src"); return; }
     const id = video.videoId || youtubeId(video.url); if (!id) { section.hidden = true; return; }
-    section.hidden = false; const frame = section.querySelector("[data-youtube-frame]");
-    frame.src = `https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=1&loop=1&playlist=${encodeURIComponent(id)}&playsinline=1&controls=1&rel=0&origin=${encodeURIComponent(location.origin)}`;
+    section.hidden = false;
+    const src = `https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=0&mute=1&playsinline=1&controls=1&rel=0&origin=${encodeURIComponent(location.origin)}`;
+    if (frame) {
+      frame.loading = "lazy";
+      frame.dataset.lazySrc = src;
+      frame.removeAttribute("src");
+      const loadFrame = () => { if (!frame.getAttribute("src")) frame.setAttribute("src", frame.dataset.lazySrc || src); };
+      if ("IntersectionObserver" in window) {
+        const io = new IntersectionObserver(entries => {
+          if (entries.some(entry => entry.isIntersecting)) { loadFrame(); io.disconnect(); section._qsVideoObserver = null; }
+        }, { rootMargin: "350px 0px" });
+        section._qsVideoObserver = io;
+        io.observe(section);
+      } else loadFrame();
+    }
     section.querySelector("[data-video-title]").textContent = video.title || "Queshift on YouTube";
     section.querySelector("[data-video-description]").textContent = video.description || "Watch how Queshift simplifies marketplace accounting and reconciliation.";
   }
@@ -293,23 +333,31 @@
   function initIntro() {
     const intro = document.querySelector(".intro");
     if (!intro) return;
-    // Show the intro only once per browser session. Repeat page visits open instantly.
-    if (sessionStorage.getItem("qs_intro_seen") === "1") { intro.remove(); return; }
+    const now = Date.now(), thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    const lastSeen = Number(localStorage.getItem("qs_intro_seen_at") || 0);
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const slowConnection = !!(connection && (connection.saveData || /(^|-)2g$|slow-2g/i.test(connection.effectiveType || "")));
+    if ((lastSeen && (now - lastSeen) < thirtyDays) || slowConnection) {
+      try { localStorage.setItem("qs_intro_seen_at", String(now)); } catch (_) {}
+      intro.remove();
+      return;
+    }
     document.body.classList.add("no-scroll");
     const video = intro.querySelector("video"), skip = intro.querySelector(".skip"), sound = intro.querySelector(".sound");
     let closed = false;
     const close = () => {
       if (closed) return; closed = true;
-      sessionStorage.setItem("qs_intro_seen", "1");
+      try { localStorage.setItem("qs_intro_seen_at", String(Date.now())); } catch (_) {}
       intro.classList.add("hide"); document.body.classList.remove("no-scroll");
-      setTimeout(() => intro.remove(), 500);
+      setTimeout(() => intro.remove(), 450);
     };
     if (skip) skip.addEventListener("click", close);
     if (video) { video.addEventListener("ended", close); video.addEventListener("error", close); }
     if (sound && video) sound.addEventListener("click", () => { video.muted = !video.muted; sound.textContent = video.muted ? "♫ Sound On" : "🔇 Mute"; video.play().catch(() => {}); });
     if (video) video.play().catch(() => close());
-    setTimeout(close, 6000);
+    setTimeout(close, 4500);
   }
+
   function initCounters() {
     const counters = document.querySelectorAll("[data-count]"); if (!counters.length) return;
     const animate = el => {
