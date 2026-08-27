@@ -16,7 +16,8 @@
     partners: [{ name: "Ajay Kumar", role: "Co-Owner, Queshift", imageUrl: "" }, { name: "Wasim Raza", role: "Co-Owner, Queshift", imageUrl: "" }],
     brands: ["Amazon", "Flipkart", "Myntra", "Meesho", "AJIO", "Nykaa", "JioMart", "Snapdeal", "D2C Websites", "Multi-channel Brands"],
     social: { youtube: "", instagram: "", facebook: "", awtaxation: "https://www.awtaxation.com/", whatsapp: "https://wa.me/919310907124" },
-    videos: []
+    videos: [],
+    reviews: []
   };
 
   const i18n = {
@@ -111,16 +112,17 @@
     };
     tryAt(0);
   }
-  async function loadPublic() {
+  function loadPublic() {
+    // Paint defaults/cached content immediately so the page never waits on Google Apps Script.
     let data = merge();
-    if (window.QSApi && QSApi.isConfigured()) {
-      try {
-        const remote = await QSApi.get("publicData");
-        data = merge(remote);
-        localStorage.setItem("qs_public_cache", JSON.stringify(remote));
-      } catch (_) { /* cached/default content remains available */ }
-    }
     apply(data);
+    if (window.QSApi && QSApi.isConfigured()) {
+      QSApi.get("publicData").then(remote => {
+        data = merge(remote);
+        try { localStorage.setItem("qs_public_cache", JSON.stringify(remote)); } catch (_) {}
+        apply(data);
+      }).catch(() => { /* cached/default content already painted */ });
+    }
   }
 
   function apply(data) {
@@ -138,6 +140,7 @@
     document.querySelectorAll("[data-whatsapp]").forEach(e => e.href = "https://wa.me/91" + data.phone1 + "?text=" + encodeURIComponent("Hello Queshift, I want to know about e-commerce accounting and reconciliation software."));
     renderBrands(data.brands || []); renderPartners(data.partners || []); renderBanners(data.banners || []); renderSocial(data.social || {});
     renderVideo((data.videos || []).find(v => v.active !== false && v.featured) || (data.videos || []).find(v => v.active !== false));
+    renderReviewShowcase(data.reviews || []);
     document.dispatchEvent(new CustomEvent("qs:content"));
   }
 
@@ -243,22 +246,61 @@
     section.querySelector("[data-video-description]").textContent = video.description || "Watch how Queshift simplifies marketplace accounting and reconciliation.";
   }
 
+  function renderReviewShowcase(reviews) {
+    document.querySelectorAll("[data-review-showcase]").forEach(wrap => {
+      const approved = (reviews || []).filter(r => !r.status || String(r.status).toUpperCase() === "APPROVED").slice(0, 20);
+      if (!approved.length) {
+        wrap.innerHTML = '<div class="review-empty"><b>Verified customer reviews will appear here after approval.</b><span>Share your experience below to help other e-commerce sellers.</span></div>';
+        return;
+      }
+      wrap.innerHTML = approved.map(r => {
+        const rating = Math.max(1, Math.min(5, Number(r.rating) || 5));
+        return `<article class="review-card"><div class="review-stars">${'★'.repeat(rating)}${'☆'.repeat(5-rating)}</div><p>${esc(r.comment || '')}</p><footer><b>${esc(r.name || 'Queshift Customer')}</b>${r.reply ? `<small>Queshift reply: ${esc(r.reply)}</small>` : ''}</footer></article>`;
+      }).join('');
+    });
+  }
+
   function initIntro() {
-    const intro = document.querySelector(".intro"); if (!intro) return; document.body.classList.add("no-scroll");
+    const intro = document.querySelector(".intro");
+    if (!intro) return;
+    // Show the intro only once per browser session. Repeat page visits open instantly.
+    if (sessionStorage.getItem("qs_intro_seen") === "1") { intro.remove(); return; }
+    document.body.classList.add("no-scroll");
     const video = intro.querySelector("video"), skip = intro.querySelector(".skip"), sound = intro.querySelector(".sound");
-    const close = () => { intro.classList.add("hide"); document.body.classList.remove("no-scroll"); setTimeout(() => intro.remove(), 700); };
-    skip.addEventListener("click", close); video.addEventListener("ended", close); video.addEventListener("error", close);
-    sound.addEventListener("click", () => { video.muted = !video.muted; sound.textContent = video.muted ? "♫ Sound On" : "🔇 Mute"; video.play().catch(() => {}); });
-    video.play().catch(() => {}); setTimeout(close, 15000);
+    let closed = false;
+    const close = () => {
+      if (closed) return; closed = true;
+      sessionStorage.setItem("qs_intro_seen", "1");
+      intro.classList.add("hide"); document.body.classList.remove("no-scroll");
+      setTimeout(() => intro.remove(), 500);
+    };
+    if (skip) skip.addEventListener("click", close);
+    if (video) { video.addEventListener("ended", close); video.addEventListener("error", close); }
+    if (sound && video) sound.addEventListener("click", () => { video.muted = !video.muted; sound.textContent = video.muted ? "♫ Sound On" : "🔇 Mute"; video.play().catch(() => {}); });
+    if (video) video.play().catch(() => close());
+    setTimeout(close, 6000);
   }
   function initCounters() {
     const counters = document.querySelectorAll("[data-count]"); if (!counters.length) return;
+    const animate = el => {
+      if (el.dataset.done === "1") return;
+      el.dataset.done = "1";
+      const target = Number(el.dataset.count) || 0, suffix = el.dataset.suffix || "";
+      const duration = 1800, started = performance.now();
+      el.textContent = "0" + suffix;
+      const frame = now => {
+        const t = Math.min(1, (now - started) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(target * eased) + suffix;
+        if (t < 1) requestAnimationFrame(frame); else el.textContent = target + suffix;
+      };
+      requestAnimationFrame(frame);
+    };
+    if (!("IntersectionObserver" in window)) { counters.forEach(animate); return; }
     const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-      if (!entry.isIntersecting || entry.target.dataset.done) return; entry.target.dataset.done = "1";
-      const target = +entry.target.dataset.count, suffix = entry.target.dataset.suffix || ""; let start = 0;
-      const tick = () => { start += Math.max(1, Math.ceil(target / 45)); entry.target.textContent = Math.min(start, target) + suffix; if (start < target) requestAnimationFrame(tick); };
-      tick(); observer.unobserve(entry.target);
-    }), { threshold: .35 }); counters.forEach(c => observer.observe(c));
+      if (entry.isIntersecting) { animate(entry.target); observer.unobserve(entry.target); }
+    }), { threshold: 0.15, rootMargin: "0px 0px -5% 0px" });
+    counters.forEach(c => observer.observe(c));
   }
   function initLanguage() {
     const button = document.querySelector("[data-language]"); if (!button) return;

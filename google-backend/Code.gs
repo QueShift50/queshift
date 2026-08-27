@@ -155,7 +155,8 @@ function publicData_() {
     banners:rows_('BANNERS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,title:r.TITLE,imageUrl:publicMediaUrl_(r.IMAGE_URL),link:r.LINK,active:bool_(r.ACTIVE)};}),
     partners:rows_('PARTNERS').filter(active_).sort(function(a,b){var an=String(a.NAME||'').toLowerCase(),bn=String(b.NAME||'').toLowerCase();var ar=an==='ajay kumar'?1:an==='wasim raza'?2:(+a.SORT_ORDER||99);var br=bn==='ajay kumar'?1:bn==='wasim raza'?2:(+b.SORT_ORDER||99);return ar-br;}).map(function(r){return{id:r.ID,name:r.NAME,role:r.ROLE,bio:r.BIO,imageUrl:publicMediaUrl_(r.IMAGE_URL)};}),
     brands:rows_('BRANDS').filter(active_).sort(sort_).map(function(r){return{id:r.ID,name:r.NAME,imageUrl:publicMediaUrl_(r.IMAGE_URL),url:r.URL};}),
-    videos:rows_('VIDEOS').filter(active_).map(function(r){return{id:r.ID,url:r.URL,videoId:r.VIDEO_ID,title:r.TITLE,description:r.DESCRIPTION,thumbnail:r.THUMBNAIL,featured:bool_(r.FEATURED),active:bool_(r.ACTIVE)};})
+    videos:rows_('VIDEOS').filter(active_).map(function(r){return{id:r.ID,url:r.URL,videoId:r.VIDEO_ID,title:r.TITLE,description:r.DESCRIPTION,thumbnail:r.THUMBNAIL,featured:bool_(r.FEATURED),active:bool_(r.ACTIVE)};}),
+    reviews:rows_('REVIEWS').filter(function(r){return String(r.STATUS||'').toUpperCase()==='APPROVED';}).slice().reverse().slice(0,20).map(function(r){return{id:r.ID,name:r.NAME,rating:+r.RATING||5,comment:r.COMMENT,reply:r.REPLY,status:r.STATUS};})
   };
 }
 
