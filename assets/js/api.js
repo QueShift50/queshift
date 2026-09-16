@@ -10,8 +10,18 @@
     body.set("action", action);
     body.set("payload", JSON.stringify(payload || {}));
     if (token) body.set("credential", token);
-    const response = await fetch(cfg.apiUrl, { method: "POST", body });
-    const data = await response.json();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    let response, text, data;
+    try {
+      response = await fetch(cfg.apiUrl, { method: "POST", body, signal: controller.signal });
+      text = await response.text();
+    } catch (error) {
+      if (error && error.name === "AbortError") throw new Error("Backend response timeout. Please try again.");
+      throw error;
+    } finally { clearTimeout(timer); }
+    try { data = JSON.parse(text); }
+    catch (_) { throw new Error("Google backend returned an HTML/error page. Redeploy the Apps Script Web App as Anyone access."); }
     if (!data.ok) throw new Error(data.message || "Request failed.");
     return data.data;
   }
@@ -21,7 +31,7 @@
     return new Promise((resolve, reject) => {
       const callback = "qsCallback_" + Date.now() + "_" + Math.random().toString(36).slice(2);
       const script = document.createElement("script");
-      const timeout = setTimeout(() => finish(new Error("Backend response timeout.")), 20000);
+      const timeout = setTimeout(() => finish(new Error("Backend response timeout.")), 8000);
       function finish(error, value) {
         clearTimeout(timeout);
         delete window[callback];
@@ -36,6 +46,7 @@
       url.searchParams.set("callback", callback);
       Object.entries(params || {}).forEach(([key, value]) => url.searchParams.set(key, value));
       script.onerror = () => finish(new Error("Unable to connect to Google backend."));
+      script.async = true;
       script.src = url.toString();
       document.head.appendChild(script);
     });
@@ -58,9 +69,9 @@
     let resourceKey = "";
     try { resourceKey = new URL(text, location.href).searchParams.get("resourcekey") || ""; } catch (_) {}
     const key = resourceKey ? "&resourcekey=" + encodeURIComponent(resourceKey) : "";
-    push("https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w2000" + key);
+    push("https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1400" + key);
     push("https://drive.google.com/uc?export=view&id=" + encodeURIComponent(id) + key);
-    push("https://lh3.googleusercontent.com/d/" + encodeURIComponent(id) + "=w2000");
+    push("https://lh3.googleusercontent.com/d/" + encodeURIComponent(id) + "=w1400");
     push(fallback || "");
     return out;
   }

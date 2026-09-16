@@ -5,13 +5,13 @@
     heroTitle: "Every order matched. Every rupee accounted for.",
     heroText: "Maintain e-commerce accounts, reconcile settlements and understand exact order-wise calculation across every major marketplace.",
     phone1: "9310907124", phone2: "9310907125", email: "info.queshift@gmail.com",
-    logoUrl: "assets/images/queshift-logo.png",
+    logoUrl: "assets/images/queshift-logo-fast.webp",
     faviconUrl: "favicon-32x32.png",
     banners: [
-      { title: "E-commerce Accounting & Reconciliation", imageUrl: "assets/images/queshift-banner-1.png", link: "contact.html" },
-      { title: "Designed for Marketplace Sellers and Growing Brands", imageUrl: "assets/images/queshift-banner-2.png", link: "about.html" },
-      { title: "20% OFF on First Booking — FIRST20", imageUrl: "assets/images/queshift-first20-banner.png", link: "downloads.html" },
-      { title: "DC Software Tutorials & Training Videos", imageUrl: "assets/images/dc-software-channel-banner.png", link: "https://www.youtube.com/@DC-Software" }
+      { title: "E-commerce Accounting & Reconciliation", imageUrl: "assets/images/queshift-banner-1-fast.webp", link: "contact.html" },
+      { title: "Designed for Marketplace Sellers and Growing Brands", imageUrl: "assets/images/queshift-banner-2-fast.webp", link: "about.html" },
+      { title: "20% OFF on First Booking — FIRST20", imageUrl: "assets/images/queshift-first20-banner-fast.webp", link: "downloads.html" },
+      { title: "DC Software Tutorials & Training Videos", imageUrl: "assets/images/dc-software-channel-banner-fast.webp", link: "https://www.youtube.com/@DC-Software" }
     ],
     partners: [{ name: "Ajay Kumar", role: "Co-Owner, Queshift", imageUrl: "" }, { name: "Wasim Raza", role: "Co-Owner, Queshift", imageUrl: "" }],
     brands: ["Amazon", "Flipkart", "Myntra", "Meesho", "AJIO", "Nykaa", "JioMart", "Snapdeal", "D2C Websites", "Multi-channel Brands"],
@@ -90,64 +90,39 @@
   }
   function mediaImg(value, alt, className, fallback) {
     const src = mediaUrl(value, fallback);
-    return `<img${className ? ` class="${esc(className)}"` : ""} src="${esc(src)}" data-media-src="${esc(value || "")}" data-media-fallback="${esc(fallback || "")}" alt="${esc(alt || "")}" loading="lazy">`;
+    return `<img${className ? ` class="${esc(className)}"` : ""} src="${esc(src)}" data-media-src="${esc(value || "")}" data-media-fallback="${esc(fallback || "")}" alt="${esc(alt || "")}" loading="lazy" decoding="async">`;
   }
   function applyFavicon(value) {
     const fallback = "favicon-32x32.png";
-    const source = String(value || fallback).trim() || fallback;
-    const current = document.querySelector('link[data-qs-dynamic-favicon]');
-    if (current && current.dataset.qsSource === source) return;
     const candidates = window.QSApi && QSApi.mediaCandidates ? QSApi.mediaCandidates(value, fallback) : [mediaUrl(value, fallback)];
     const tryAt = index => {
       if (index >= candidates.length) return;
-      const candidate = candidates[index];
       const test = new Image();
       test.onload = () => {
-        document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach(link => { link.href = candidate; });
+        const fresh = candidates[index] + (candidates[index].includes("?") ? "&" : "?") + "qsfv=" + Date.now();
+        document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach(link => { link.href = fresh; });
         let dynamic = document.querySelector('link[data-qs-dynamic-favicon]');
         if (!dynamic) {
-          dynamic = document.createElement("link");
-          dynamic.rel = "icon";
-          dynamic.setAttribute("data-qs-dynamic-favicon", "1");
-          document.head.appendChild(dynamic);
+          dynamic = document.createElement("link"); dynamic.rel = "icon"; dynamic.setAttribute("data-qs-dynamic-favicon", "1"); document.head.appendChild(dynamic);
         }
-        dynamic.dataset.qsSource = source;
-        dynamic.href = candidate;
+        dynamic.href = fresh;
       };
       test.onerror = () => tryAt(index + 1);
-      test.src = candidate;
+      test.src = candidates[index];
     };
     tryAt(0);
   }
-
   function loadPublic() {
-    // Fast stale-while-revalidate: paint cached/default content immediately.
+    // Paint defaults/cached content immediately so the page never waits on Google Apps Script.
     let data = merge();
     apply(data);
-    if (!(window.QSApi && QSApi.isConfigured())) return;
-
-    const cached = getLocal();
-    const cachedAt = Number(localStorage.getItem("qs_public_cache_at") || 0);
-    const freshFor = 5 * 60 * 1000;
-    if (cached && cachedAt && (Date.now() - cachedAt) < freshFor) return;
-
-    const refresh = () => {
+    if (window.QSApi && QSApi.isConfigured()) {
       QSApi.get("publicData").then(remote => {
-        if (!remote) return;
-        const previous = getLocal();
-        try {
-          localStorage.setItem("qs_public_cache", JSON.stringify(remote));
-          localStorage.setItem("qs_public_cache_at", String(Date.now()));
-        } catch (_) {}
-        // Avoid repainting/rebinding every Drive image when data has not changed.
-        let changed = true;
-        try { changed = JSON.stringify(previous || {}) !== JSON.stringify(remote || {}); } catch (_) {}
-        if (changed || !previous) apply(merge(remote));
-      }).catch(() => { /* cached/default content is already visible */ });
-    };
-
-    if ("requestIdleCallback" in window) requestIdleCallback(refresh, { timeout: 900 });
-    else setTimeout(refresh, 250);
+        data = merge(remote);
+        try { localStorage.setItem("qs_public_cache", JSON.stringify(remote)); localStorage.setItem("qs_public_cache_ts", String(Date.now())); } catch (_) {}
+        apply(data);
+      }).catch(() => { /* cached/default content already painted */ });
+    }
   }
 
   function apply(data) {
@@ -157,7 +132,7 @@
     document.querySelectorAll("[data-hero-title]").forEach(e => e.textContent = data.heroTitle);
     document.querySelectorAll("[data-hero-text]").forEach(e => e.textContent = data.heroText);
     document.querySelectorAll("[data-site-logo]").forEach(e => {
-      const fallback = "assets/images/queshift-logo.png";
+      const fallback = "assets/images/queshift-logo-fast.webp";
       if (window.QSApi && QSApi.bindImage) QSApi.bindImage(e, data.logoUrl, fallback);
       else { e.onerror = () => { e.onerror = null; e.src = fallback; }; e.src = mediaUrl(data.logoUrl, fallback); }
     });
@@ -224,7 +199,7 @@
   }
   function renderBanners(banners) {
     const slider = document.querySelector("[data-banner-slider]"); if (!slider || !banners.length) return;
-    slider.innerHTML = `<div class="banner-track" aria-live="off">${banners.map((b, i) => `<a class="banner-slide${i ? "" : " active"}" href="${safeUrl(b.link || "#")}" ${b.link && /^https?:/i.test(b.link) ? 'target="_blank" rel="noopener"' : ""} aria-hidden="${i ? "true" : "false"}">${mediaImg(b.imageUrl, b.title || "Queshift banner", "", "assets/images/queshift-banner-1.png")}<span>${esc(b.title || "")}</span></a>`).join("")}</div><div class="slider-dots">${banners.map((_, i) => `<button type="button" aria-label="Show banner ${i + 1}" class="${i ? "" : "active"}" data-slide="${i}"></button>`).join("")}</div>`;
+    slider.innerHTML = `<div class="banner-track" aria-live="off">${banners.map((b, i) => `<a class="banner-slide${i ? "" : " active"}" href="${safeUrl(b.link || "#")}" ${b.link && /^https?:/i.test(b.link) ? 'target="_blank" rel="noopener"' : ""} aria-hidden="${i ? "true" : "false"}">${mediaImg(b.imageUrl, b.title || "Queshift banner", "", "assets/images/queshift-banner-1-fast.webp")}<span>${esc(b.title || "")}</span></a>`).join("")}</div><div class="slider-dots">${banners.map((_, i) => `<button type="button" aria-label="Show banner ${i + 1}" class="${i ? "" : "active"}" data-slide="${i}"></button>`).join("")}</div>`;
     bindMedia(slider);
     let index = 0, timer = 0;
     const slides = Array.from(slider.querySelectorAll(".banner-slide")), dots = Array.from(slider.querySelectorAll("[data-slide]"));
@@ -263,101 +238,52 @@
   function youtubeId(url) { try { const u = new URL(url); return u.hostname.includes("youtu.be") ? u.pathname.slice(1) : u.searchParams.get("v") || u.pathname.split("/").filter(Boolean).pop(); } catch (_) { return ""; } }
   function renderVideo(video) {
     const section = document.querySelector("[data-video-section]"); if (!section) return;
-    if (section._qsVideoObserver) { section._qsVideoObserver.disconnect(); section._qsVideoObserver = null; }
-    const frame = section.querySelector("[data-youtube-frame]");
-    if (!video || !video.url) { section.hidden = true; if (frame) frame.removeAttribute("src"); return; }
+    if (!video || !video.url) { section.hidden = true; return; }
     const id = video.videoId || youtubeId(video.url); if (!id) { section.hidden = true; return; }
-    section.hidden = false;
-    const src = `https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=0&mute=1&playsinline=1&controls=1&rel=0&origin=${encodeURIComponent(location.origin)}`;
-    if (frame) {
-      frame.loading = "lazy";
-      frame.dataset.lazySrc = src;
-      frame.removeAttribute("src");
-      const loadFrame = () => { if (!frame.getAttribute("src")) frame.setAttribute("src", frame.dataset.lazySrc || src); };
-      if ("IntersectionObserver" in window) {
-        const io = new IntersectionObserver(entries => {
-          if (entries.some(entry => entry.isIntersecting)) { loadFrame(); io.disconnect(); section._qsVideoObserver = null; }
-        }, { rootMargin: "350px 0px" });
-        section._qsVideoObserver = io;
-        io.observe(section);
-      } else loadFrame();
-    }
+    section.hidden = false; const frame = section.querySelector("[data-youtube-frame]");
+    frame.src = `https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=1&loop=1&playlist=${encodeURIComponent(id)}&playsinline=1&controls=1&rel=0&origin=${encodeURIComponent(location.origin)}`;
     section.querySelector("[data-video-title]").textContent = video.title || "Queshift on YouTube";
     section.querySelector("[data-video-description]").textContent = video.description || "Watch how Queshift simplifies marketplace accounting and reconciliation.";
   }
 
   function renderReviewShowcase(reviews) {
     document.querySelectorAll("[data-review-showcase]").forEach(wrap => {
-      if (wrap._qsReviewTimer) { clearInterval(wrap._qsReviewTimer); wrap._qsReviewTimer = null; }
-      const approved = (reviews || []).filter(r => !r.status || String(r.status).toUpperCase() === "APPROVED").slice(0, 30);
+      const approved = (reviews || []).filter(r => !r.status || String(r.status).toUpperCase() === "APPROVED").slice(0, 20);
       if (!approved.length) {
         wrap.innerHTML = '<div class="review-empty"><b>Verified customer reviews will appear here after approval.</b><span>Share your experience below to help other e-commerce sellers.</span></div>';
         return;
       }
-
-      const groups = [];
-      for (let i = 0; i < approved.length; i += 3) groups.push(approved.slice(i, i + 3));
-      const card = r => {
+      wrap.innerHTML = approved.map(r => {
         const rating = Math.max(1, Math.min(5, Number(r.rating) || 5));
         return `<article class="review-card"><div class="review-stars">${'★'.repeat(rating)}${'☆'.repeat(5-rating)}</div><p>${esc(r.comment || '')}</p><footer><b>${esc(r.name || 'Queshift Customer')}</b>${r.reply ? `<small>Queshift reply: ${esc(r.reply)}</small>` : ''}</footer></article>`;
-      };
-      wrap.innerHTML = `<div class="review-slider" aria-label="Queshift customer reviews">
-        <div class="review-track">${groups.map((group, i) => `<div class="review-slide${i === 0 ? ' active' : ''}" data-review-slide="${i}">${group.map(card).join('')}</div>`).join('')}</div>
-        ${groups.length > 1 ? `<div class="review-controls"><button class="review-arrow" type="button" data-review-prev aria-label="Previous reviews">‹</button><div class="review-dots">${groups.map((_, i) => `<button type="button" class="review-dot${i === 0 ? ' active' : ''}" data-review-dot="${i}" aria-label="Show review group ${i + 1}"></button>`).join('')}</div><button class="review-arrow" type="button" data-review-next aria-label="Next reviews">›</button></div>` : ''}
-      </div>`;
-
-      if (groups.length < 2) return;
-      const slides = Array.from(wrap.querySelectorAll('[data-review-slide]'));
-      const dots = Array.from(wrap.querySelectorAll('[data-review-dot]'));
-      let index = 0;
-      const show = next => {
-        index = (next + slides.length) % slides.length;
-        slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
-        dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
-      };
-      const stop = () => { if (wrap._qsReviewTimer) { clearInterval(wrap._qsReviewTimer); wrap._qsReviewTimer = null; } };
-      const start = () => { stop(); if (!document.hidden) wrap._qsReviewTimer = setInterval(() => show(index + 1), 5500); };
-      const prev = wrap.querySelector('[data-review-prev]'), next = wrap.querySelector('[data-review-next]');
-      if (prev) prev.onclick = () => { show(index - 1); start(); };
-      if (next) next.onclick = () => { show(index + 1); start(); };
-      dots.forEach(dot => dot.onclick = () => { show(Number(dot.dataset.reviewDot) || 0); start(); });
-      wrap.addEventListener('mouseenter', stop);
-      wrap.addEventListener('mouseleave', start);
-      wrap.addEventListener('focusin', stop);
-      wrap.addEventListener('focusout', start);
-      document.addEventListener('visibilitychange', () => document.hidden ? stop() : start(), { passive: true });
-      start();
+      }).join('');
     });
   }
 
   function initIntro() {
     const intro = document.querySelector(".intro");
     if (!intro) return;
-    const now = Date.now(), thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    // Ultra-fast intro: show at most once every 24 hours and never hold the site for 6–10 seconds.
     const lastSeen = Number(localStorage.getItem("qs_intro_seen_at") || 0);
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    const slowConnection = !!(connection && (connection.saveData || /(^|-)2g$|slow-2g/i.test(connection.effectiveType || "")));
-    if ((lastSeen && (now - lastSeen) < thirtyDays) || slowConnection) {
-      try { localStorage.setItem("qs_intro_seen_at", String(now)); } catch (_) {}
-      intro.remove();
-      return;
-    }
+    const saveData = !!(navigator.connection && navigator.connection.saveData);
+    const slowNet = !!(navigator.connection && /(^|-)2g|3g/i.test(navigator.connection.effectiveType || ""));
+    if (saveData || slowNet || (Date.now() - lastSeen < 86400000)) { intro.remove(); return; }
     document.body.classList.add("no-scroll");
     const video = intro.querySelector("video"), skip = intro.querySelector(".skip"), sound = intro.querySelector(".sound");
     let closed = false;
     const close = () => {
       if (closed) return; closed = true;
-      try { localStorage.setItem("qs_intro_seen_at", String(Date.now())); } catch (_) {}
+      localStorage.setItem("qs_intro_seen_at", String(Date.now()));
       intro.classList.add("hide"); document.body.classList.remove("no-scroll");
-      setTimeout(() => intro.remove(), 450);
+      if (video) { try { video.pause(); } catch (_) {} }
+      setTimeout(() => intro.remove(), 250);
     };
     if (skip) skip.addEventListener("click", close);
     if (video) { video.addEventListener("ended", close); video.addEventListener("error", close); }
     if (sound && video) sound.addEventListener("click", () => { video.muted = !video.muted; sound.textContent = video.muted ? "♫ Sound On" : "🔇 Mute"; video.play().catch(() => {}); });
     if (video) video.play().catch(() => close());
-    setTimeout(close, 4500);
+    setTimeout(close, 2200);
   }
-
   function initCounters() {
     const counters = document.querySelectorAll("[data-count]"); if (!counters.length) return;
     const animate = el => {
