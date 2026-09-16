@@ -50,9 +50,9 @@
 
   function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   function safeUrl(value) { try { const u = new URL(value, location.href); return /^(https?:|mailto:|tel:)$/.test(u.protocol) ? u.href : "#"; } catch (_) { return "#"; } }
-  const PUBLIC_CACHE_KEY = "qs_public_cache_v11";
-  const PUBLIC_CACHE_TS_KEY = "qs_public_cache_v11_ts";
-  const PUBLIC_CACHE_MAX_AGE = 6 * 60 * 60 * 1000;
+  const PUBLIC_CACHE_KEY = "qs_public_cache_v12";
+  const PUBLIC_CACHE_TS_KEY = "qs_public_cache_v12_ts";
+  const PUBLIC_CACHE_MAX_AGE = 5 * 60 * 1000;
   function getLocal() {
     try {
       const ts = Number(localStorage.getItem(PUBLIC_CACHE_TS_KEY) || 0);
@@ -134,34 +134,48 @@
       wrap.innerHTML = '<div class="qs-live-loading"><span></span><b>Loading verified customer reviews…</b></div>';
     });
   }
+  function paintBaseWhileLiveLoads() {
+    const base = merge();
+    document.querySelectorAll("[data-phone1]").forEach(e => e.textContent = base.phone1);
+    document.querySelectorAll("[data-phone2]").forEach(e => e.textContent = base.phone2);
+    document.querySelectorAll("[data-email]").forEach(e => e.textContent = base.email);
+    document.querySelectorAll("[data-hero-title]").forEach(e => e.textContent = base.heroTitle);
+    document.querySelectorAll("[data-hero-text]").forEach(e => e.textContent = base.heroText);
+    document.querySelectorAll("[data-site-logo]").forEach(e => { if (window.QSApi && QSApi.bindImage) QSApi.bindImage(e, base.logoUrl, "assets/images/queshift-logo-fast.webp"); });
+    document.querySelectorAll("[data-whatsapp]").forEach(e => e.href = "https://wa.me/91" + base.phone1);
+    showLiveContentLoading();
+  }
+
+  function clearLegacyPublicCaches() {
+    try {
+      [
+        "qs_public_cache", "qs_public_cache_ts",
+        "qs_public_cache_v10", "qs_public_cache_v10_ts",
+        "qs_public_cache_v11", "qs_public_cache_v11_ts"
+      ].forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
+  }
+
   function loadPublic() {
+    // V12 is NETWORK-FIRST: never paint an old Admin snapshot before asking the live backend.
+    // A very short-lived cache is used only if the backend request fails.
+    clearLegacyPublicCaches();
     const cached = getLocal();
-    if (cached) apply(merge(cached));
-    else {
-      // Base text/logo paints instantly, while dynamic Admin content waits for the live response.
-      const base = merge();
-      document.querySelectorAll("[data-phone1]").forEach(e => e.textContent = base.phone1);
-      document.querySelectorAll("[data-phone2]").forEach(e => e.textContent = base.phone2);
-      document.querySelectorAll("[data-email]").forEach(e => e.textContent = base.email);
-      document.querySelectorAll("[data-hero-title]").forEach(e => e.textContent = base.heroTitle);
-      document.querySelectorAll("[data-hero-text]").forEach(e => e.textContent = base.heroText);
-      document.querySelectorAll("[data-site-logo]").forEach(e => { if (window.QSApi && QSApi.bindImage) QSApi.bindImage(e, base.logoUrl, "assets/images/queshift-logo-fast.webp"); });
-      document.querySelectorAll("[data-whatsapp]").forEach(e => e.href = "https://wa.me/91" + base.phone1);
-      showLiveContentLoading();
-    }
+    paintBaseWhileLiveLoads();
+
     if (window.QSApi && QSApi.isConfigured()) {
       QSApi.get("publicData").then(remote => {
         try {
           localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify(remote));
           localStorage.setItem(PUBLIC_CACHE_TS_KEY, String(Date.now()));
-          localStorage.removeItem("qs_public_cache");
-          localStorage.removeItem("qs_public_cache_ts");
         } catch (_) {}
         apply(merge(remote));
       }).catch(() => {
-        if (!cached) apply(merge());
+        if (cached) apply(merge(cached));
+        else apply(merge());
       });
-    } else if (!cached) apply(merge());
+    } else if (cached) apply(merge(cached));
+    else apply(merge());
   }
 
   function apply(data) {
