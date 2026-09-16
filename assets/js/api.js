@@ -69,9 +69,11 @@
     let resourceKey = "";
     try { resourceKey = new URL(text, location.href).searchParams.get("resourcekey") || ""; } catch (_) {}
     const key = resourceKey ? "&resourcekey=" + encodeURIComponent(resourceKey) : "";
-    push("https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1400" + key);
+    // Googleusercontent is usually the fastest public image host. Keep Drive fallbacks for resource-key files.
+    push("https://lh3.googleusercontent.com/d/" + encodeURIComponent(id) + "=w1600");
+    push("https://drive.google.com/thumbnail?id=" + encodeURIComponent(id) + "&sz=w1600" + key);
     push("https://drive.google.com/uc?export=view&id=" + encodeURIComponent(id) + key);
-    push("https://lh3.googleusercontent.com/d/" + encodeURIComponent(id) + "=w1400");
+    push("https://drive.usercontent.google.com/download?id=" + encodeURIComponent(id) + "&export=view" + key);
     push(fallback || "");
     return out;
   }
@@ -82,6 +84,7 @@
 
   function bindImage(img, value, fallback) {
     const candidates = mediaCandidates(value, fallback);
+    try { img.referrerPolicy = "no-referrer"; } catch (_) {}
     let index = 0;
     const next = () => {
       if (index >= candidates.length) { img.onerror = null; return; }

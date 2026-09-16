@@ -50,26 +50,40 @@
 
   function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   function safeUrl(value) { try { const u = new URL(value, location.href); return /^(https?:|mailto:|tel:)$/.test(u.protocol) ? u.href : "#"; } catch (_) { return "#"; } }
-  function getLocal() { try { return JSON.parse(localStorage.getItem("qs_public_cache") || "null"); } catch (_) { return null; } }
+  const PUBLIC_CACHE_KEY = "qs_public_cache_v11";
+  const PUBLIC_CACHE_TS_KEY = "qs_public_cache_v11_ts";
+  const PUBLIC_CACHE_MAX_AGE = 6 * 60 * 60 * 1000;
+  function getLocal() {
+    try {
+      const ts = Number(localStorage.getItem(PUBLIC_CACHE_TS_KEY) || 0);
+      if (!ts || Date.now() - ts > PUBLIC_CACHE_MAX_AGE) return null;
+      return JSON.parse(localStorage.getItem(PUBLIC_CACHE_KEY) || "null");
+    } catch (_) { return null; }
+  }
   function merge(data) {
     const cached = getLocal() || {}, remote = data || {};
     const out = Object.assign({}, defaults, cached, remote);
     if (!String(out.logoUrl || "").trim()) out.logoUrl = String(cached.logoUrl || "").trim() || defaults.logoUrl;
     if (!String(out.faviconUrl || "").trim()) out.faviconUrl = String(cached.faviconUrl || "").trim() || defaults.faviconUrl;
     ["banners", "brands"].forEach(key => {
-      if (!Array.isArray(out[key]) || !out[key].length) {
-        out[key] = Array.isArray(cached[key]) && cached[key].length ? cached[key] : defaults[key];
-      }
+      if (!Array.isArray(out[key]) || !out[key].length) out[key] = Array.isArray(cached[key]) && cached[key].length ? cached[key] : defaults[key];
     });
     const partnerMap = new Map();
     [defaults.partners, Array.isArray(cached.partners) ? cached.partners : [], Array.isArray(remote.partners) ? remote.partners : []].forEach(list => list.forEach(item => {
       const key = String(item && item.name || "").trim().toLowerCase();
       if (!key) return;
-      partnerMap.set(key, Object.assign({}, partnerMap.get(key) || {}, item));
+      const prev = partnerMap.get(key) || {};
+      const next = Object.assign({}, prev, item);
+      if (!String(next.imageUrl || "").trim() && String(prev.imageUrl || "").trim()) next.imageUrl = prev.imageUrl;
+      if (!String(next.bio || "").trim() && String(prev.bio || "").trim()) next.bio = prev.bio;
+      partnerMap.set(key, next);
     }));
     out.partners = Array.from(partnerMap.values());
     if (!Array.isArray(out.videos)) out.videos = [];
-    out.social = Object.assign({}, defaults.social, cached.social || {}, remote.social || {});
+    const social = Object.assign({}, defaults.social, cached.social || {});
+    Object.entries(remote.social || {}).forEach(([key, value]) => { if (String(value || "").trim()) social[key] = value; });
+    if (Array.isArray(remote.social && remote.social.custom)) social.custom = remote.social.custom;
+    out.social = social;
     return out;
   }
   function mediaUrl(value, fallback) {
@@ -112,17 +126,42 @@
     };
     tryAt(0);
   }
+  function showLiveContentLoading() {
+    document.querySelectorAll("[data-partners]").forEach(wrap => {
+      wrap.innerHTML = '<div class="qs-live-loading"><span></span><b>Loading owner photos & live profile…</b></div>';
+    });
+    document.querySelectorAll("[data-review-showcase]").forEach(wrap => {
+      wrap.innerHTML = '<div class="qs-live-loading"><span></span><b>Loading verified customer reviews…</b></div>';
+    });
+  }
   function loadPublic() {
-    // Paint defaults/cached content immediately so the page never waits on Google Apps Script.
-    let data = merge();
-    apply(data);
+    const cached = getLocal();
+    if (cached) apply(merge(cached));
+    else {
+      // Base text/logo paints instantly, while dynamic Admin content waits for the live response.
+      const base = merge();
+      document.querySelectorAll("[data-phone1]").forEach(e => e.textContent = base.phone1);
+      document.querySelectorAll("[data-phone2]").forEach(e => e.textContent = base.phone2);
+      document.querySelectorAll("[data-email]").forEach(e => e.textContent = base.email);
+      document.querySelectorAll("[data-hero-title]").forEach(e => e.textContent = base.heroTitle);
+      document.querySelectorAll("[data-hero-text]").forEach(e => e.textContent = base.heroText);
+      document.querySelectorAll("[data-site-logo]").forEach(e => { if (window.QSApi && QSApi.bindImage) QSApi.bindImage(e, base.logoUrl, "assets/images/queshift-logo-fast.webp"); });
+      document.querySelectorAll("[data-whatsapp]").forEach(e => e.href = "https://wa.me/91" + base.phone1);
+      showLiveContentLoading();
+    }
     if (window.QSApi && QSApi.isConfigured()) {
       QSApi.get("publicData").then(remote => {
-        data = merge(remote);
-        try { localStorage.setItem("qs_public_cache", JSON.stringify(remote)); localStorage.setItem("qs_public_cache_ts", String(Date.now())); } catch (_) {}
-        apply(data);
-      }).catch(() => { /* cached/default content already painted */ });
-    }
+        try {
+          localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify(remote));
+          localStorage.setItem(PUBLIC_CACHE_TS_KEY, String(Date.now()));
+          localStorage.removeItem("qs_public_cache");
+          localStorage.removeItem("qs_public_cache_ts");
+        } catch (_) {}
+        apply(merge(remote));
+      }).catch(() => {
+        if (!cached) apply(merge());
+      });
+    } else if (!cached) apply(merge());
   }
 
   function apply(data) {
@@ -194,6 +233,7 @@
         return `<article class="owner">${photo}<div><h3>${esc(p.name)}</h3><b>${esc(p.role || "Co-Owner, Queshift")}</b><p>${esc(p.bio || "Building practical e-commerce accounting and reconciliation solutions for growing sellers.")}</p></div></article>`;
       }).join("");
       bindMedia(wrap);
+      wrap.querySelectorAll(".owner-photo").forEach(img => { img.loading = "eager"; try { img.fetchPriority = "high"; } catch (_) {} });
       bindOwnerZoom(wrap);
     });
   }
@@ -248,15 +288,37 @@
 
   function renderReviewShowcase(reviews) {
     document.querySelectorAll("[data-review-showcase]").forEach(wrap => {
-      const approved = (reviews || []).filter(r => !r.status || String(r.status).toUpperCase() === "APPROVED").slice(0, 20);
+      if (wrap._qsReviewTimer) { clearInterval(wrap._qsReviewTimer); wrap._qsReviewTimer = 0; }
+      const approved = (reviews || []).filter(r => !r.status || String(r.status).toUpperCase() === "APPROVED").slice(0, 30);
       if (!approved.length) {
         wrap.innerHTML = '<div class="review-empty"><b>Verified customer reviews will appear here after approval.</b><span>Share your experience below to help other e-commerce sellers.</span></div>';
         return;
       }
-      wrap.innerHTML = approved.map(r => {
+      const groups = [];
+      for (let i = 0; i < approved.length; i += 3) groups.push(approved.slice(i, i + 3));
+      const card = r => {
         const rating = Math.max(1, Math.min(5, Number(r.rating) || 5));
         return `<article class="review-card"><div class="review-stars">${'★'.repeat(rating)}${'☆'.repeat(5-rating)}</div><p>${esc(r.comment || '')}</p><footer><b>${esc(r.name || 'Queshift Customer')}</b>${r.reply ? `<small>Queshift reply: ${esc(r.reply)}</small>` : ''}</footer></article>`;
-      }).join('');
+      };
+      wrap.innerHTML = `<div class="review-viewport"><div class="review-track">${groups.map(group => `<div class="review-page">${group.map(card).join('')}</div>`).join('')}</div></div>${groups.length > 1 ? `<div class="review-controls"><button type="button" class="review-arrow review-prev" aria-label="Previous reviews">‹</button><div class="review-dots">${groups.map((_,i)=>`<button type="button" data-review-dot="${i}" class="${i===0?'active':''}" aria-label="Show review group ${i+1}"></button>`).join('')}</div><button type="button" class="review-arrow review-next" aria-label="Next reviews">›</button></div>` : ''}`;
+      if (groups.length < 2) return;
+      const track = wrap.querySelector('.review-track');
+      const dots = Array.from(wrap.querySelectorAll('[data-review-dot]'));
+      let index = 0, timer = 0;
+      const show = n => {
+        index = (n + groups.length) % groups.length;
+        track.style.transform = `translate3d(-${index * 100}%,0,0)`;
+        dots.forEach((dot,i)=>dot.classList.toggle('active',i===index));
+      };
+      const stop = () => { if (timer) { clearInterval(timer); timer = 0; } wrap._qsReviewTimer = 0; };
+      const start = () => { stop(); if (!document.hidden) { timer = setInterval(() => show(index + 1), 6000); wrap._qsReviewTimer = timer; } };
+      wrap.querySelector('.review-prev').addEventListener('click', () => { show(index - 1); start(); });
+      wrap.querySelector('.review-next').addEventListener('click', () => { show(index + 1); start(); });
+      dots.forEach(dot => dot.addEventListener('click', () => { show(Number(dot.dataset.reviewDot)); start(); }));
+      wrap.addEventListener('mouseenter', stop); wrap.addEventListener('mouseleave', start);
+      wrap.addEventListener('focusin', stop); wrap.addEventListener('focusout', start);
+      document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+      start();
     });
   }
 
