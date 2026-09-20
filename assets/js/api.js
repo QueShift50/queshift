@@ -2,10 +2,17 @@
   "use strict";
 
   const cfg = window.QUESHIFT_CONFIG || {};
-  const isConfigured = () => /^https:\/\/script\.google\.com\//.test(cfg.apiUrl || "");
+  const isConfigured = () => {
+    try {
+      const u = new URL(cfg.apiUrl || "");
+      return u.protocol === "https:" && !!u.hostname;
+    } catch (_) {
+      return false;
+    }
+  };
 
   async function post(action, payload, token) {
-    if (!isConfigured()) throw new Error("Google backend setup is pending.");
+    if (!isConfigured()) throw new Error("Queshift backend setup is pending.");
     const body = new URLSearchParams();
     body.set("action", action);
     body.set("payload", JSON.stringify(payload || {}));
@@ -23,7 +30,7 @@
       throw error;
     } finally { clearTimeout(timer); }
     try { data = JSON.parse(text); }
-    catch (_) { throw new Error("Google backend returned an HTML/error page. Redeploy the Apps Script Web App as Anyone access."); }
+    catch (_) { throw new Error("Queshift backend returned an invalid response."); }
     if (!data.ok) throw new Error(data.message || "Request failed.");
     return data.data;
   }
