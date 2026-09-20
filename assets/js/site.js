@@ -1,3 +1,4 @@
+window.QUESHiFT_WEB_BUILD = "V14-MULTI-GMAIL";
 (function () {
   "use strict";
 

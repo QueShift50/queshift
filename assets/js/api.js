@@ -16,7 +16,7 @@
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     let response, text, data;
     try {
-      response = await fetch(cfg.apiUrl, { method: "POST", body, signal: controller.signal });
+      response = await fetch(cfg.apiUrl, { method: "POST", body, mode: "cors", credentials: "omit", signal: controller.signal });
       text = await response.text();
     } catch (error) {
       if (error && error.name === "AbortError") throw new Error("Backend response timeout. Please try again.");
@@ -28,30 +28,48 @@
     return data.data;
   }
 
-  function get(action, params) {
-    if (!isConfigured()) return Promise.reject(new Error("Google backend setup is pending."));
-    return new Promise((resolve, reject) => {
-      const callback = "qsCallback_" + Date.now() + "_" + Math.random().toString(36).slice(2);
-      const script = document.createElement("script");
-      const timeout = setTimeout(() => finish(new Error("Backend response timeout.")), action === "publicData" ? 12000 : 15000);
-      function finish(error, value) {
-        clearTimeout(timeout);
-        delete window[callback];
-        script.remove();
-        error ? reject(error) : resolve(value);
-      }
-      window[callback] = result => result && result.ok
-        ? finish(null, result.data)
-        : finish(new Error((result && result.message) || "Request failed."));
-      const url = new URL(cfg.apiUrl);
-      url.searchParams.set("action", action);
-      url.searchParams.set("callback", callback);
-      Object.entries(params || {}).forEach(([key, value]) => url.searchParams.set(key, value));
-      script.onerror = () => finish(new Error("Unable to connect to Google backend."));
-      script.async = true;
-      script.src = url.toString();
-      document.head.appendChild(script);
+  async function get(action, params) {
+    if (!isConfigured()) throw new Error("Queshift backend setup is pending.");
+
+    const url = new URL(cfg.apiUrl);
+    url.searchParams.set("action", action);
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) url.searchParams.set(key, value);
     });
+
+    const controller = new AbortController();
+    const timeoutMs = action === "publicData" ? 15000 : 20000;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response, text, data;
+    try {
+      response = await fetch(url.toString(), {
+        method: "GET",
+        mode: "cors",
+        cache: action === "publicData" ? "default" : "no-store",
+        credentials: "omit",
+        signal: controller.signal
+      });
+      text = await response.text();
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        throw new Error("Backend response timeout. Please try again.");
+      }
+      throw new Error("Unable to connect to Queshift backend.");
+    } finally {
+      clearTimeout(timer);
+    }
+
+    try {
+      data = JSON.parse(text);
+    } catch (_) {
+      throw new Error("Queshift backend returned an invalid response.");
+    }
+
+    if (!data || !data.ok) {
+      throw new Error((data && data.message) || "Request failed.");
+    }
+    return data.data;
   }
 
   function driveId(value) {
