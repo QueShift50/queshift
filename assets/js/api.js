@@ -11,7 +11,9 @@
     body.set("payload", JSON.stringify(payload || {}));
     if (token) body.set("credential", token);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 12000);
+    const adminActions = /^(adminDashboard|saveSettings|saveSocial|saveBanner|savePartner|saveBrand|saveVideo|saveBlog|saveHelpArticle|savePlan|saveSoftwareFile|deleteContent|approvePayment|rejectPayment|reviewAction|enquiryAction)$/;
+    const timeoutMs = action === "adminDashboard" ? 35000 : (adminActions.test(action) ? 30000 : 20000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     let response, text, data;
     try {
       response = await fetch(cfg.apiUrl, { method: "POST", body, signal: controller.signal });
@@ -31,7 +33,7 @@
     return new Promise((resolve, reject) => {
       const callback = "qsCallback_" + Date.now() + "_" + Math.random().toString(36).slice(2);
       const script = document.createElement("script");
-      const timeout = setTimeout(() => finish(new Error("Backend response timeout.")), 8000);
+      const timeout = setTimeout(() => finish(new Error("Backend response timeout.")), action === "publicData" ? 12000 : 15000);
       function finish(error, value) {
         clearTimeout(timeout);
         delete window[callback];

@@ -50,9 +50,9 @@
 
   function esc(value) { return String(value == null ? "" : value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   function safeUrl(value) { try { const u = new URL(value, location.href); return /^(https?:|mailto:|tel:)$/.test(u.protocol) ? u.href : "#"; } catch (_) { return "#"; } }
-  const PUBLIC_CACHE_KEY = "qs_public_cache_v12";
-  const PUBLIC_CACHE_TS_KEY = "qs_public_cache_v12_ts";
-  const PUBLIC_CACHE_MAX_AGE = 5 * 60 * 1000;
+  const PUBLIC_CACHE_KEY = "qs_public_cache_v13";
+  const PUBLIC_CACHE_TS_KEY = "qs_public_cache_v13_ts";
+  const PUBLIC_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // emergency fallback only
   function getLocal() {
     try {
       const ts = Number(localStorage.getItem(PUBLIC_CACHE_TS_KEY) || 0);
@@ -157,9 +157,17 @@
   }
 
   function loadPublic() {
-    // V12 is NETWORK-FIRST: never paint an old Admin snapshot before asking the live backend.
-    // A very short-lived cache is used only if the backend request fails.
-    clearLegacyPublicCaches();
+    // V13 is NETWORK-FIRST. Previous good Admin data is only an emergency fallback.
+    try {
+      if (!localStorage.getItem(PUBLIC_CACHE_KEY)) {
+        const old = localStorage.getItem("qs_public_cache_v12");
+        const oldTs = localStorage.getItem("qs_public_cache_v12_ts");
+        if (old) {
+          localStorage.setItem(PUBLIC_CACHE_KEY, old);
+          localStorage.setItem(PUBLIC_CACHE_TS_KEY, oldTs || String(Date.now()));
+        }
+      }
+    } catch (_) {}
     const cached = getLocal();
     paintBaseWhileLiveLoads();
 
@@ -168,6 +176,7 @@
         try {
           localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify(remote));
           localStorage.setItem(PUBLIC_CACHE_TS_KEY, String(Date.now()));
+          clearLegacyPublicCaches();
         } catch (_) {}
         apply(merge(remote));
       }).catch(() => {
